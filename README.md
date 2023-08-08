@@ -55,7 +55,7 @@ train, test = dataset.time_aware_split_index('month', 6, 1)
 ```
 
 ### Analysis
-The analysis class runs the experiment outlined in the paper. Currently there are 3 main experiments, base, half and snoop. The results of this will be logged in a MySQL database and the results in a pkl file. By default, a file name ```pkl_files``` needs to be created.
+The analysis class runs the experiment outlined in the paper. Currently, there are 3 main experiments, base, half and snoop. The results of this will be logged in a MySQL database and the results in a pkl file. By default, a file name ```pkl_files``` needs to be created.
 ```python
 analyse = Analysis(X, y, t, f, feature_names, train, test)
 
@@ -66,7 +66,7 @@ analyse.run(training_family=training_family, testing_family=testing_family,exper
 ```
 
 ### Visualizing data
-To visualise the results, we first load in the corresponding data in question. ```The ResultsLoader()``` class gives an easy way in accessing saved experiments.
+To visualise the results, we first load in the corresponding data in question. The ```ResultsLoader()``` class gives an easy way in accessing saved experiments.
 
 ```python
 training_familes = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
