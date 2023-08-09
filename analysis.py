@@ -14,10 +14,9 @@ import pickle
 from collections import Counter
 import sqlite3
 from datetime import datetime
-import json
 
 
-from secml.ml.classifiers import CClassifierSVM, CClassifierSkLearn
+from secml.ml.classifiers import CClassifierSVM
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
 
 import explanations

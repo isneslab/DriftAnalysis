@@ -8,9 +8,8 @@ A module specific for explanation methods.
 
 """
 import numpy as np
-import secml
 from secml.array import CArray
-from secml.explanation import CExplainerGradient, CExplainerGradientInput, CExplainerIntegratedGradients
+from secml.explanation import CExplainerIntegratedGradients
 from sklearn import svm
 
 class Explain():
