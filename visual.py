@@ -384,6 +384,10 @@ class VizExpl():
                 
         return output
     
+    def get_top_feature_for_sample(self, sample, k=5):
+        # Iterate through every group to find the sample and its explanation.
+        pass
+    
     def feature_difference(self, k=30, group_selection=None):
         if self.results1 == None or self.results2 == None:
             print("Results 1 or Results 2 is None")
