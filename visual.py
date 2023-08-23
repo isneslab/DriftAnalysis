@@ -128,14 +128,31 @@ class Viz():
         ax.set_xlim(-6.5,months_of_x-7)
     
     def gradient_poi_selection(self,ax):
+        """Function that selectionos POI by first calculating the difference of F1
+        between 2 plots, then its change between X(t+1) and X(t). Plots the result
+        along with markers for top 3 POI
+
+        Args:
+            ax (matplotlib.pyplot.axis): Matplotlib axis to plot on
+        """        
+        # Difference between F1 of results 2 and results 1
         difference = np.subtract(self.results2['f1'][1:],self.results1['f1'][1:])
+        
+        # Calculate difference of X(t+1) - X(t)
         gradient = np.diff(difference)
+        
+        # Insert 0 at the start to keep length consistence
         result = np.insert(gradient, 0,0)
+        
+        # Set points where results 1 out performs results 2 to 0, we only want improvements
         result = [n3 if n1 > n2 else 0 for n1,n2,n3 in zip(self.results2['f1'][1:],self.results1['f1'][1:], result)]
         result = np.array(result)
 
+        # Select markers to plot
         markers_on = result.argsort(axis=0)[::-1][:3]
         x = np.arange(len(result))
+        
+        # Plot result
         ax.plot(x, result,linewidth=2, alpha=0.6,label='Gradients',color='r')
         for n in markers_on:
             ax.axvline(n,linestyle='-.',color='r')
