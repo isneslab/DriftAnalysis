@@ -128,11 +128,12 @@ class Viz():
         ax.set_xlim(-6.5,months_of_x-7)
     
     def gradient_poi_selection(self,ax):
-        difference = np.subtract(self.results2['f1'],self.results1['f1'])
+        difference = np.subtract(self.results2['f1'][1:],self.results1['f1'][1:])
         gradient = np.diff(difference)
-        result = [n3 if n1 > n2 else 0 for n1,n2,n3 in zip(self.results2['f1'],self.results1['f1'], gradient)]
+        result = np.insert(gradient, 0,0)
+        result = [n3 if n1 > n2 else 0 for n1,n2,n3 in zip(self.results2['f1'][1:],self.results1['f1'][1:], result)]
         result = np.array(result)
-        
+
         markers_on = result.argsort(axis=0)[::-1][:3]
         x = np.arange(len(result))
         ax.plot(x, result,linewidth=2, alpha=0.6,label='Gradients',color='r')
