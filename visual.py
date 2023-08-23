@@ -74,9 +74,12 @@ class Viz():
         self.label1 = label1
         self.label2 = label2
         
-        rc('font', **{'size': 20, 'family': 'serif', 'serif': ['Computer Modern Roman']})
+        rc('font', **{'size': 40, 'family': 'serif', 'serif': ['Computer Modern Roman']})
         rc('text', usetex=True)
-        rcParams['figure.figsize'] = [18.5, 9.5]
+        rc('xtick', labelsize=30)
+        rc('ytick', labelsize=30)
+        rc('legend', fontsize=30)
+        rcParams['figure.figsize'] = [16, 10]
     
     def performance(self, ax):
         """Function that plots the performance curve of results1 and/or results2.
@@ -99,18 +102,18 @@ class Viz():
         if self.results2 != None:   
             y2_f1 = self.results2['f1'][1:]
             ax.plot(x, y2_f1, color = ColorMap['F1'].value, markersize=7, marker="o", 
-                       label=self.label2, linewidth=2)
+                       label=f'F1 {self.label2}', linewidth=2)
             alpha_1 = 0.3
         else:
             ax.plot(x, y1_recall, color= ColorMap['RECALL'].value, markersize=7, 
                     marker="^", label=f'Recall {self.label1}', linewidth=2)
             
             ax.plot(x, y1_prec, color= ColorMap['PREC'].value, markersize=7, 
-                    marker="s", label=f'Precision {self.label2}', linewidth=2)
+                    marker="s", label=f'Precision {self.label1}', linewidth=2)
 
         # Plot f1 score for results 1
         ax.plot(x, y1_f1, color = ColorMap['F1'].value, markersize = 7, marker="o",
-                label=self.label1, linewidth=2, alpha=alpha_1)
+                label=f'F1 {self.label1}', linewidth=2, alpha=alpha_1)
         ax.fill_between(x, 0, y1_f1, facecolor='none', hatch='/',
                         edgecolor='#BCDEFE', rasterized=True)
 
@@ -125,20 +128,16 @@ class Viz():
         ax.set_xlim(-6.5,months_of_x-7)
     
     def gradient_poi_selection(self,ax):
-        # Gradient POI selection, clean this up later
-        difference = np.subtract(self.results1['f1'],self.results2['f2'])
-        diff = np.diff(difference)
-        diff = np.insert(diff,0,0)
-        result = np.gradient(difference)
-        result = [n3 if n1 > n2 else 0 for n1,n2,n3 in zip(self.results1['f1'],self.results2['f2'], result)]
+        difference = np.subtract(self.results2['f1'],self.results1['f1'])
+        gradient = np.diff(difference)
+        result = [n3 if n1 > n2 else 0 for n1,n2,n3 in zip(self.results2['f1'],self.results1['f1'], gradient)]
         result = np.array(result)
         
-        # plotting
         markers_on = result.argsort(axis=0)[::-1][:3]
         x = np.arange(len(result))
         ax.plot(x, result,linewidth=2, alpha=0.6,label='Gradients',color='r')
         for n in markers_on:
-            ax.axvline(n+7,linestyle='-.',color='r')
+            ax.axvline(n,linestyle='-.',color='r')
         ax.set_ylim(0,1)
       
     
@@ -146,28 +145,46 @@ class Viz():
         """Function that shows the distribution of families in the samples used
         for both training and testing. Training months are shifted to begin at -5 to 0 and
         testing months begin at 1. 
-        # TODO: Automate training shift
-        # TODO: Currently only shows first half as total_family records on first half
+        TODO: Automate training shift
 
         Args:
             ax (matplotlib.pyplot.axis): Matplotlib axis to plot on
             goodware (bool, optional): Whether goodware should be shown. Defaults to False.
         """        
-        families = self.get_families_used(goodware)
+        families = self.get_families_used()
         groups = np.arange(-6, len(self.results1['total_family']) - 6)
         previous_count = np.array([0]* len(self.results1['total_family']))
+        accepted_families = ["DOWGIN",'DNOTUA','KUGUO','AIRPUSH','REVMOB']
         
+        others = np.array([0]* len(self.results1['total_family']))
         for family in families:
-            count_by_family = []
-            for group in groups:
-                if family in self.results1['total_family'][group + 6]:
-                    count_by_family.append(self.results1['total_family'][group + 6][family])
-                else:
-                    count_by_family.append(0)
+            if family in accepted_families:
+                count_by_family = []
+                for group in groups:
+                    if family in self.results1['total_family'][group + 6]:
+                        count_by_family.append(self.results1['total_family'][group + 6][family])
+                    else:
+                        count_by_family.append(0)
 
-            ax.bar(groups, count_by_family, label=family, bottom=previous_count,
-                   color=ColorMap[family].value)
-            previous_count += np.array(count_by_family)
+                ax.bar(groups, count_by_family, label=family, bottom=previous_count,
+                    color=ColorMap[family].value)
+                previous_count += np.array(count_by_family)
+            else:
+                count_by_family = []
+                for group in groups:
+                    if family in self.results1['total_family'][group + 6]:
+                        count_by_family.append(self.results1['total_family'][group + 6][family])
+                    else:
+                        count_by_family.append(0)
+                others += np.array(count_by_family)
+                
+        # Other families
+        if len(families) > len(accepted_families):
+            ax.bar(groups, others, label='OTHERS', bottom=previous_count, color='#800000')
+            previous_count += np.array(others)
+        
+        if goodware:
+            ax.bar(groups, previous_count, label='GOODWARE',bottom=previous_count, color=ColorMap['GOODWARE'].value)        
         
         months_of_x = len(self.results1['total_family'])+1
         labels_x = [str(x-6) if ((x > 6 and ((x-1) % 5 == 0 or x == 7)) or x == 1)
@@ -178,8 +195,10 @@ class Viz():
         ax.set_ylabel('\# of samples')
         ax.legend(loc='best', fontsize=15)
         ax.set_xlim(-6.5,months_of_x-7)
+        plt.grid(visible=True, which='major', axis="y")
+
     
-    def get_families_used(self, goodware=True):
+    def get_families_used(self, goodware=False):
         """Helper function that iterates through all months and returns
         the families used in both training and testing
 
@@ -217,51 +236,60 @@ class Viz():
         
         # Get all families 
         familes = self.get_families_used(goodware=True)
-        previous_count = [0] * len(self.results1['Correct'])
+        previous_count = [0] * len(self.results1['correct_family'])
         
+        total_samples_all = [0] * len(self.results1['correct_family'])
+        for family in familes:
+            for group in range(len(self.results1['correct_family'])):
+                if family in self.results1['total_family'][group + 6]:
+                        total_samples_all[group] += self.results1['total_family'][group + 6][family]       
         # Loop through families
         for family in familes:
             results1_true_positives = []
             results2_true_positives = []
             
             # Get a count of individial families for every group
-            for group in range(len(self.results1['Correct'])):
-                if family in self.results1['Correct'][group]:
+            for group in range(len(self.results1['correct_family'])):
+                if family in self.results1['correct_family'][group]:
                     results1_true_positives.append(\
-                        self.results1['Correct'][family])
+                        self.results1['correct_family'][group][family])
+                else:
+                    results1_true_positives.append(0)
                     
-                if family in self.results2['Correct'][group]:
+                if family in self.results2['correct_family'][group]:
                     results2_true_positives.append(\
-                        self.results2['Correct'][family])
+                        self.results2['correct_family'][group][family])
+                else:
+                    results2_true_positives.append(0)
             
             # Find the difference between results2 and results 1 per family
             true_positive_diff = np.subtract(results2_true_positives,\
                                              results1_true_positives)
-            
-            # Normalise results to total number of samples per group
-            true_positive_diff_norm = np.divide(true_positive_diff,\
-                                                self.results1['total_family'][6:])
+            # Normalise results to total number of samples per group  
+            true_positive_diff_norm = true_positive_diff / total_samples_all
             
             # Check if month selection is given
             if month_selection != None:
                 X = np.arange(len(month_selection))
                 true_positive_diff_norm = true_positive_diff_norm[month_selection]
                 if len(previous_count) != len(month_selection):
-                    previous_count[month_selection]
+                    previous_count = [previous_count[x] for x in month_selection]
             else:
-                X = np.arange(len(self.results1['Correct']))
+                X = np.arange(len(self.results1['correct_family']))
             
+            # Remove negatives and NAN
+            true_positive_diff_norm = [x if x >= 0 else 0 for x in true_positive_diff_norm]
+            print(true_positive_diff_norm, family)
             # Plot bar plot
             ax.bar(X, true_positive_diff_norm, color=ColorMap[family].value,\
                   label = family.capitalize(), bottom=previous_count)
             
-            previous_count = true_positive_diff_norm
+            previous_count += np.array(true_positive_diff_norm)
 
         # Plot parameters
-        ax.set_xticks(len(X))
+        ax.set_xticks(np.arange(len(X)))
         if month_selection == None:
-            labels_x = [str(x-6) if ((x > 6 and ((x-1) % 5 == 0 or x == 7)) or x == 1)
-                    else '' for x in range(1,len(X))]
+            labels_x = [x if (x % 5 ==0 or x == 1) else '' for x in range(1,len(X)+1)]
         else:
             labels_x = np.add([1] * len(X), month_selection)
         ax.set_xticklabels(labels_x)
@@ -292,7 +320,7 @@ class Viz():
         fig, ax = plt.subplots(2,1)
         
         self.performance(ax[0])
-        self.distribution(ax[1])      
+        self.distribution(ax[1], True)      
                 
         if self.results2 != None and poi == True:
             ax2 = ax[1].twinx()
@@ -300,8 +328,7 @@ class Viz():
 
             ax2.set_ylabel("Gradient of difference")
         
-        plt.xlabel('Month')
-        plt.grid(visible=True, which='major', axis="y")
+        ax[1].set_xlabel('Month')
         plt.show()
     
     def plot_single(self, plot, month_selection=None):
@@ -314,14 +341,15 @@ class Viz():
 
         """        
         fig, ax = plt.subplots(1)
-        
-        
+        months=None
+        if month_selection != None:
+            months = [x-1 for x in month_selection]
         if plot.lower() == 'distribution':
             self.distribution(ax)
         elif plot.lower() == 'performance':
             self.performance(ax)
         elif plot.lower() == 'difference':
-            self.family_diff(ax, month_selection)
+            self.family_diff(ax, months)
         else:
             print("Plot type not found, try: \
                   distribution|performance|difference")
@@ -340,76 +368,160 @@ class VizExpl():
         self.label2 = label2
 
         
-    def get_explanations_mean(self, expl, filter_list):
+    def get_explanations_mean(self, result, family_select):
+        """Calculate the mean of the explanations
+
+        Args:
+            result (list): Dictionary of results
+            family_select (list): List of samples to consider
+
+        Returns:
+            list: List of meaned explanationed
+        """        
+        # If family select, compute a filter list
+        filter_list = []
+        if family_select != None:
+            for group in result['family_class']:
+                filter_group = []
+                for idx, sample in enumerate(group):
+                    if sample[1] in family_select:
+                        filter_group.append(idx)
+            
+                filter_list.append(filter_group)
+                
         output = []
         # Take the mean of every sample
-        for group in len(expl):
-            if isinstance(expl[group], np.ndarray):
+        for group_num, group in enumerate(result['explanations'][1:]):
+            if isinstance(group[0], np.ndarray):
                 if filter_list != []:
-                    explanations = expl[group][filter_list]
+                    if filter_list[group_num] != []:
+                        explanations = group[0][filter_list[group_num]]
+                    else:
+                        output.append(0)
                 else:
-                    explanations = expl[group]
+                    explanations = group[0]
                 output.append(np.mean(explanations, axis=0))
             else:
                 output.append(0)
     
         return output
     
-    def get_top_features(self, result, family_select, k=5, group_selection=None):
-        # TODO: Add family selection
-        filter_list = []
-        if family_select != None:
-            for group in len(result['family_class']):
-                filter_group = []
-                for sample in group:
-                    if sample in family_select:
-                        filter_group.append(sample)
-            
-                filter_list.append(filter_list)
+    def get_top_features(self, result, family_select=None, k=5):
+        """Get the top features of each month and returns a filter for them
+
+        Args:
+            result (dict): Dictionary of result
+            family_select (list, optional): List of families to filter, if None then all families.
+            k (int, optional): Number of top features to show. Defaults to 5.
+
+        Returns:
+            list: List of filters for top k
+        """        
         
-        expl_mean = self.get_explanations_mean(result['explanation'], filter_list)
+        expl_mean = self.get_explanations_mean(result, family_select)
         output = []
         
-        if group_selection == None:
-            group_selection = np.arange(len(expl_mean))        
+        for group in expl_mean:
+            if isinstance(group, np.ndarray):
+                topk_filter = group.argsort(axis=0)[::-1][:k]
+                output.append(topk_filter)
+            else:
+                output.append('None')
         
-        for group in group_selection:
-            topk_filter = expl_mean[group].argsort(axis=0)[::-1][:k]
-            output.append(topk_filter)
-            
-            # Print results
-            print('-'*20)
-            for idx, n in enumerate(topk_filter):
-                print('{}   {}  {}'.format(idx, result['feature_names'][n], n))
-                
         return output
     
-    def get_top_feature_for_sample(self, sample, k=5):
-        # Iterate through every group to find the sample and its explanation.
-        pass
+    def get_top_feature_for_sample(self, md5_sample, k=5):
+        """Given an md5 sample, get the top feature of it if its in
+        the test set
+
+        Args:
+            md5_sample (str): MD5 sample to locate
+            k (int, optional): Print top k features. Defaults to 5.
+        """            
+        # Find the md5 sample and save explanations
+        for group_count, group in enumerate(self.results1['explanations'][1:]):
+            for idx, md5 in enumerate(group[1]):
+                if md5.lower() == md5_sample.lower():
+                    explanation = group[0][idx]
+                    group_number = group_count
+                    break
     
-    def feature_difference(self, k=30, group_selection=None):
+        # Print md5, the family label and the prediction (0 for GW 1 for MW)
+        print("MD5: {}".format(md5_sample.upper()))
+        print(f"Group sample found in: {group_number + 1}")
+        family_label = self.results1['family_class'][group_number][idx][1]
+        pred_val = self.results1['family_class'][group_number][idx][0]
+        print("Family Label: {}".format(family_label))
+        print("Predicted as: {}".format(pred_val))
+        
+        # Get argsort of top k features
+        topk_features = explanation.argsort(axis=0)[::-1][:k]
+        print("-"*5)
+        for idx, n in enumerate(topk_features):
+            print(idx,self.results1['feature_names'][n], explanation[n])
+    
+    def feature_difference(self, group_selection, family_select=None, k=30):
+        """Finds the difference between results2 topk features and results1 topk
+        features.
+
+        Args:
+            group_selection (list): List of groups to return result.
+            family_select (list, optional): List of families, if None then all families in test set.
+            k (int, optional): Topk to select for each result. Defaults to 30.
+
+        """        
         if self.results1 == None or self.results2 == None:
             print("Results 1 or Results 2 is None")
             return None 
+        if family_select != None:
+            family_select = list(map(str.upper,family_select))
+        topk_features1 = self.get_top_features(self.results1, family_select=family_select, k=k)
+        topk_features2 = self.get_top_features(self.results2, family_select=family_select, k=k)
+
         
-        topk_features1 = self.get_top_features(self.results1, k=k, group_selection=group_selection)
-        topk_features2 = self.get_top_features(self.results2, k=k, group_selection=group_selection)
-        
-        for group in len(topk_features1):
-            results1_topk_set = set(topk_features1[group])
-            results2_topk_set = set(topk_features2[group])
+        for group in group_selection:
+            print(f'Group {group}: Top {k} features of {self.label2} - top {k} features of {self.label1}')
+            results1_topk_set = set(topk_features1[group-1])
+            results2_topk_set = set(topk_features2[group-1])
             
             new_features  = results2_topk_set - results1_topk_set
             
             # Print results
             print('-'*20)
             for idx, n in enumerate(new_features):
-                print('Group {}'.format(group))
-                print('-'*5)
                 print('{}   {}  {}'.format(idx, self.results1['feature_names'][n], n))     
     
-    
+    def get_samples_from_group(self,group_selection, family_selection, count=5):
+        """For a given group selection, print out information about samples
+        and their explanations
+
+        Args:
+            group_selection (list): List of groups to consider
+            family_selection (list): List of families to filter
+            count (int, optional): Number of samples to give. Defaults to 5.
+        """        
+        family_selection = list(map(str.upper,family_selection))
+        running_count = 0
+        for group in group_selection:
+            print("-"*20)
+            print(f"Group {group}")
+            for idx, md5 in enumerate(self.results1['explanations'][1:][group-1][1]):
+                if self.results1['family_class'][group-1][idx][1] in family_selection:
+                    print("-"*5)
+                    print(f"MD5: {md5}")
+                    print(f"Family: {self.results1['family_class'][group-1][idx][1]}")
+                    print(f"Predicted as: {self.results1['family_class'][group-1][idx][0]}")
+                    
+                    explanation = self.results1['explanations'][1:][group-1][0][idx]
+                    topk_features = explanation.argsort(axis=0)[::-1][:5]
+                    for x, n in enumerate(topk_features):
+                        print(x,self.results1['feature_names'][n], explanation[n])
+                
+                    running_count += 1
+                    if running_count >= count:
+                        break
+                
+                
     
     
     
@@ -417,11 +529,21 @@ if __name__=='__main__':
     print("Visual module")
     training_familes = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
     testing_families = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
-    ResultsLoader().query_database_for_ID('half',training_familes,testing_families,'Transcend')
-    base = ResultsLoader().load_file_from_id(5)
-    # visual = Viz(base)
-    # visual.plot_performance_distribution()
-    # visual.plot_single('distribution')
+    # ResultsLoader().query_database_for_ID('snoop',training_familes,testing_families,'Transcend')
+    c1 = ResultsLoader().load_file_from_id(14) # half
+    c2 = ResultsLoader().load_file_from_id(15) # snoop
+    c3 = ResultsLoader().load_file_from_id(17) # snoop no gw
+    all = ResultsLoader().load_file_from_id(18) # all families
+    dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
+    all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
+    dnotua_all_ish = ResultsLoader().load_file_from_id(20) # all families (actually just 20) + dnotua month 31
+    c1_random = ResultsLoader().load_file_from_id(24) # half random
+    c2_random = ResultsLoader().load_file_from_id(22) # snoop random
+    c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
+    visual = Viz(c1_random, c2_random)
+    visual.plot_performance_distribution()
+    # visual.plot_single('difference', month_selection=[27, 33,43])
     
-    visual = VizExpl(base)
-    visual.get_explanations_mean(base)
+    # VizExpl(c3,c2).feature_difference(group_selection=[40, 45, 50])
+    # VizExpl(c2).get_top_feature_for_sample('b073f248d7817bced11e07bb4fcb5c43')
+    # VizExpl(c1).get_samples_from_group(group_selection=[46],family_selection=['Dnotua'])

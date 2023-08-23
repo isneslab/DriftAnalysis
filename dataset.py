@@ -114,7 +114,14 @@ class Dataset():
         
         return indices
         
-        
+    def get_date_from_md5(self, md5):
+        for idx, sample in enumerate(self.md5):
+            if sample.upper() == md5.upper():
+                print(self.t[idx].year)
+                print(self.t[idx].month)
+                print(self.f[idx])
+    
+    
     def sample_select_from_feature_id(self,families, ids, contains=True,year=None,month=None, md5_samples=3):
         """Function that selects samples of a given feature ID
 

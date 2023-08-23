@@ -10,6 +10,7 @@ pickle format.
 """
 import numpy as np
 from sklearn import svm
+from sklearn.utils import shuffle
 import pickle
 from collections import Counter
 import sqlite3
@@ -24,7 +25,7 @@ from util import get_random_string
 
 
 class Analysis():    
-    def __init__(self, X, y,t,f, feature_names, train_index, test_index):       
+    def __init__(self, X, y,t,f, feature_names, md5, train_index, test_index):       
         """Initialise analysis class with input data and indexes 
 
         Args:
@@ -41,11 +42,12 @@ class Analysis():
         self.t = t
         self.f = f
         self.feature_names = feature_names
+        self.md5 = md5
         self.initial_train = train_index
         self.initial_test = test_index
         self.results = {"accuracy":[], "f1":[], "recall":[], "precision":[], "f1_n":[],  "recall_n":[], "precision_n":[],
                         "train_amount":[], "test_amount":[], "total_family":[], "explanations":[], "correct_family":[], 
-                        "family_class":[]}
+                        "family_class":[], "feature_names":feature_names}
         
     
     def train_svc_model(self,X_train, y_train):
@@ -234,10 +236,12 @@ class Analysis():
         # Select samples of chosen families   
         if family != None:
             family = list(map(str.upper,family))
-            family.append('GOODWARE')
             selected_indexes = self.family_selection_from_index(self.initial_train,family)
         else:
             selected_indexes = self.initial_train
+        
+        # # Add extra training samples from test set
+        # selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
             
         # Initial model
         model = self.train_secml_model(self.X[selected_indexes], self.y[selected_indexes])
@@ -257,7 +261,7 @@ class Analysis():
         
         # Update results
         self.update_performance_results(*eval_out[:-1], len(selected_indexes),
-                                        family_labels_array,explanations_results)
+                                        family_labels_array,[explanations_results, self.md5[selected_indexes]])
         
         
         
@@ -277,7 +281,6 @@ class Analysis():
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
-                family.append('GOODWARE')
                 selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
             else:
                 selected_indexes = self.initial_test[group]
@@ -296,11 +299,11 @@ class Analysis():
         
             # Update results
             self.update_performance_results(*eval_out[:-1], training_amount,
-                                        self.f[selected_indexes],explanations_results)
+                                        self.f[selected_indexes],[explanations_results, self.md5[selected_indexes]])
             self.check_family_labels(eval_out[-1], selected_indexes)
         
     
-    def family_selection_from_index(self, indexes, family):
+    def family_selection_from_index(self, indexes, family, goodware=True):
         """Helper function to select all families from 
         a given list of index
 
@@ -311,18 +314,41 @@ class Analysis():
         Returns:
             List: Indexes for a chosen family
         """        
-                
+        
         output = []
         for index in indexes:
             if self.f[index] in family:
                 output.append(index)
                 
+        len_malware_samples = len(output)
+        
+        if goodware:
+            output += self.goodware_selection_from_index(indexes, len_malware_samples)
+            
         return output   
-     
+    
+    def goodware_selection_from_index(self, indexes, amount):
+        """Helper function to select goodware from a given list of index
+
+        Args:
+            indexes (list): List of indexes selected
+            amount (int): Number of goodware to select
+
+        Returns:
+            List: Indexes of goodware samples
+        """        
+        output = []
+        for index in indexes:
+            if self.f[index] == 'GOODWARE':
+                output.append(index)
+                if len(output) >= amount:  
+                    break
+                
+        return output
         
-        
-    def stratified_split(self, indexes):
-        """Helper function that does straified split
+    def stratified_split(self, indexes, gw_split1=True, gw_split2=True):
+        """Helper function that does straified split. Has option to add/remove
+        goodware in first/second half.
 
         Args:
             indexes (list): List of selected indexes
@@ -337,16 +363,67 @@ class Analysis():
         
         families = list(Counter(self.f[indexes]).keys())
     
+        # Stratified split for families
         for family in families:
-            full_family = self.family_selection_from_index(indexes, family)
-            half = len(full_family)//2
-            first_half += full_family[:half]
-            second_half += full_family[half:]
+            if family != 'GOODWARE':
+                full_family = self.family_selection_from_index(indexes, family, goodware=False)
+                half = len(full_family)//2
+                first_half += full_family[:half]
+                second_half += full_family[half:]
+        
+        # Stratified split for goodware
+        total_malware_samples = len(first_half) + len(second_half)
+        goodware_samples = self.goodware_selection_from_index(indexes,total_malware_samples)
+        if gw_split1:
+            first_half += goodware_samples[:total_malware_samples//2]
+        
+        if gw_split2:
+            second_half += goodware_samples[total_malware_samples//2:]
+            
+        return first_half, second_half
+    
+    def random_split(self, indexes, gw_split1=True, gw_split2=True):
+        """Helper function that does random split. Has option to add/remove
+        goodware in first/second half.
+
+        Args:
+            indexes (list): List of selected indexes
+
+        Returns:
+            List: Indexes for first half of split
+            List: Indexes for second half of split
+        """        
+        
+        all_samples = []
+        
+        families = list(Counter(self.f[indexes]).keys())
+    
+        # Put all families in all_samples array
+        for family in families:
+            if family != 'GOODWARE':
+                full_family = self.family_selection_from_index(indexes, family, goodware=False)
+                all_samples += full_family
+        
+        # Select some goodware
+        total_malware_samples = len(all_samples)
+        goodware_samples = self.goodware_selection_from_index(indexes,total_malware_samples)
+        
+        # Random split malware
+        all_samples = shuffle(all_samples, random_state=3)
+        first_half = all_samples[:total_malware_samples//2]
+        second_half = all_samples[total_malware_samples//2:]
+        
+        # Add in goodware samples
+        if gw_split1:
+            first_half += goodware_samples[:total_malware_samples//2]
+        
+        if gw_split2:
+            second_half += goodware_samples[total_malware_samples//2:]
             
         return first_half, second_half
     
     
-    def testing_half_group(self, model, training_amount, family=None):
+    def testing_half_group(self, model, training_amount, family=None, strat_split=True):
         """Experiment that tests on half of each group. Stratified
         Sampling is used to ensure even split in families
 
@@ -361,12 +438,15 @@ class Analysis():
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
-                family.append('GOODWARE')
                 selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
             else:
                 selected_indexes = self.initial_test[group]
             
-            first_half, _ = self.stratified_split(selected_indexes)
+            if strat_split:
+                first_half, _ = self.stratified_split(selected_indexes)
+            else:
+                first_half, _ = self.random_split(selected_indexes)
+                
             X_test = self.X[first_half]
             y_test = self.y[first_half]
             
@@ -381,12 +461,12 @@ class Analysis():
         
             # Update results
             self.update_performance_results(*eval_out[:-1], training_amount,
-                                        self.f[selected_indexes],explanations_results)
+                                        self.f[selected_indexes],[explanations_results, self.md5[first_half]])
             self.check_family_labels(eval_out[-1], first_half, selected_indexes)
 
         
     
-    def testing_half_group_snooped(self, family=None):
+    def testing_half_group_snooped(self, family=None, gw_split2=True, strat_split = True):
         """Experiment that trains on initial training + second half of
         testing for each group. Tests on remaining half the same group.
         StratifiedSampling is used to ensure even split in families.
@@ -394,23 +474,29 @@ class Analysis():
         Args:
             family (list, optional): List of families selected for training, if None then
             all familes are used.
-        """                
+        """              
+        family = list(map(str.upper,family))
+        train_selected_indexes = self.family_selection_from_index(self.initial_train, family)
+          
         explainer = explanations.Explain()
         for group in range(len(self.initial_test)):
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
-                family.append('GOODWARE')
                 selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
             else:
                 selected_indexes = self.initial_test[group]
             
-            first_half, second_half = self.stratified_split(selected_indexes)
+            if strat_split:
+                first_half, second_half = self.stratified_split(selected_indexes, gw_split2=gw_split2)
+            else:
+                first_half, second_half = self.random_split(selected_indexes, gw_split2=gw_split2)
+                
             X_test = self.X[first_half]
             y_test = self.y[first_half]
 
             # Snoop ahead and train on snooped group
-            retrain_index = self.initial_train + second_half
+            retrain_index = train_selected_indexes + second_half
             model = self.train_secml_model(self.X[retrain_index], self.y[retrain_index])
             print("Snooped on group {} with {} training samples".format(group, len(retrain_index)))
 
@@ -426,7 +512,7 @@ class Analysis():
         
             # Update results
             self.update_performance_results(*eval_out[:-1], len(retrain_index),
-                                        self.f[selected_indexes],explanations_results)
+                                        self.f[selected_indexes],[explanations_results, self.md5[first_half]])
             self.check_family_labels(eval_out[-1], first_half, selected_indexes)
         
     def run(self, training_family, testing_family, experiment, dataset):
@@ -443,11 +529,11 @@ class Analysis():
         # Main experiment that runs training and testing given certain params
         # then saves them in sqlite database
         
-        available_experiments = ['base','half','snoop']
+        available_experiments = ['base','half','snoop','nogwsnoop','half_random','snoop_random','nogwsnoop_random']
         
         if experiment.lower() not in available_experiments:
             print("Error: Experiment not recognised, \
-                  try: base|half|snoop")
+                  try: base|half|snoop|nogwsnoop|half_random|snoop_random|nogwsnoop_random")
             exit()
             
         
@@ -458,10 +544,27 @@ class Analysis():
             self.testing_half_group(trained_model, trained_amount,testing_family)
         elif experiment.lower() == 'snoop':
             self.testing_half_group_snooped(testing_family)
+        elif experiment.lower() == 'nogwsnoop':
+            self.testing_half_group_snooped(testing_family, gw_split2=False)
+        elif experiment.lower() == 'half_random':
+            self.testing_half_group(trained_model, trained_amount,testing_family, strat_split=False)
+        elif experiment.lower() == 'snoop_random':
+            self.testing_half_group_snooped(testing_family, strat_split=False)
+        elif experiment.lower() == 'nogwsnoop_random':
+            self.testing_half_group_snooped(testing_family, gw_split2=False, strat_split=False)
         else:
             pass
         
-        training_family = list(map(str.upper,training_family))
-        testing_family = list(map(str.upper,testing_family))
+        if training_family == None:
+            training_family = ['ALL']
+        else:
+            training_family = list(map(str.upper,training_family))
+            
+        if testing_family == None:
+            testing_family = ['ALL']
+        else:
+            testing_family = list(map(str.upper,testing_family))
+        
+        
         self.save_results(experiment, training_family, testing_family, dataset)
         print("Done")
