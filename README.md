@@ -1,7 +1,9 @@
 # Dataset Analysis
 
-Repository containing code for our [DIMVA paper](https://www.overleaf.com/project/636e75bbd657c38e61acf45f).
+Repository containing code for our AISec23 paper, "Drift Forensics for Malware Classifiers". 
+
 Link to dataset can be found [Here](https://emckclac-my.sharepoint.com/:u:/g/personal/k21129040_kcl_ac_uk/ERcKWdTr_bxFmR5fIE2xgqYBn_LrTom8IfmnwgWyOGVA-w?e=nIAMn9)
+
 ## Getting Started
 
 ### Installation
