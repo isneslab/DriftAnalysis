@@ -15,6 +15,7 @@ from tqdm import tqdm
 import numpy as np
 from dateutil.relativedelta import relativedelta
 from collections import Counter
+import calendar
 
 class Dataset():
     def __init__(self, X, y, t, f, feature_names, md5=None):
@@ -62,17 +63,22 @@ class Dataset():
 
         # Get earliest start date
         start_date = time_sorted_with_index[0][0]
-
+        
         # Slice out training partition
-        boundary = start_date + get_relative_delta(train_window, granularity)
-        to_idx = bisect.bisect_left(dates, boundary)
-        train = indexes[:to_idx]
+        relative_date = start_date + get_relative_delta(train_window, granularity)
 
+        # Calculate last day of the month
+        boundary = relative_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        to_idx = bisect.bisect_left(dates, boundary)
+        train = indexes[:to_idx]        
+        
         tests = []
         while to_idx < len(indexes):
-            boundary += get_relative_delta(test_window, granularity)
+            relative_date = dates[to_idx] + get_relative_delta(test_window, granularity)
+            boundary = relative_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
             from_idx = to_idx
-            to_idx = bisect.bisect_left(dates, boundary)
+            to_idx = bisect.bisect_left(dates, boundary, to_idx)
             tests.append(indexes[from_idx:to_idx])
 
         return train, tests
