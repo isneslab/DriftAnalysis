@@ -81,7 +81,13 @@ class Dataset():
             to_idx = bisect.bisect_left(dates, boundary, to_idx)
             tests.append(indexes[from_idx:to_idx])
 
-        return train, tests
+        new_tests = []
+        # Attempt to recreate starting state here
+        for test in tests:
+            new_test = sorted(test)
+            new_tests.append(new_test)
+
+        return train, new_tests
     
     
     def family_selection(self, families):

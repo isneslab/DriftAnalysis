@@ -236,7 +236,8 @@ class Analysis():
         # Select samples of chosen families   
         if family != None:
             family = list(map(str.upper,family))
-            selected_indexes = self.family_selection_from_index(self.initial_train,family)
+            # selected_indexes = self.family_selection_from_index(self.initial_train,family)
+            selected_indexes = self.family_selection_from_index_recreate(self.initial_train, family)
         else:
             selected_indexes = self.initial_train
         
@@ -244,6 +245,8 @@ class Analysis():
         # selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
             
         # Initial model
+        print(self.md5[selected_indexes])
+        exit()
         model = self.train_secml_model(self.X[selected_indexes], self.y[selected_indexes])
 
         # Evaluate trained model
@@ -327,6 +330,23 @@ class Analysis():
             
         return output   
     
+    def family_selection_from_index_recreate(self, indexes,families, goodware=True):
+        output = []
+
+        for family in families:
+            for index in indexes:
+                if self.f[index] == family:
+                    output.append(index)
+                    
+        len_malware_samples = len(output)
+
+        if goodware:
+            output += self.goodware_selection_from_index(indexes, len_malware_samples)
+
+        return output   
+
+
+
     def goodware_selection_from_index(self, indexes, amount):
         """Helper function to select goodware from a given list of index
 
@@ -341,6 +361,7 @@ class Analysis():
         for index in indexes:
             if self.f[index] == 'GOODWARE':
                 output.append(index)
+
                 if len(output) >= amount:  
                     break
                 
@@ -382,7 +403,7 @@ class Analysis():
             
         return first_half, second_half
     
-    def random_split(self, indexes, gw_split1=True, gw_split2=True):
+    def random_split(self, indexes):
         """Helper function that does random split. Has option to add/remove
         goodware in first/second half.
 
@@ -394,31 +415,11 @@ class Analysis():
             List: Indexes for second half of split
         """        
         
-        all_samples = []
-        
-        families = list(Counter(self.f[indexes]).keys())
-    
-        # Put all families in all_samples array
-        for family in families:
-            if family != 'GOODWARE':
-                full_family = self.family_selection_from_index(indexes, family, goodware=False)
-                all_samples += full_family
-        
-        # Select some goodware
-        total_malware_samples = len(all_samples)
-        goodware_samples = self.goodware_selection_from_index(indexes,total_malware_samples)
-        
+        total_number_of_samples = len(indexes)
         # Random split malware
-        all_samples = shuffle(all_samples, random_state=3)
-        first_half = all_samples[:total_malware_samples//2]
-        second_half = all_samples[total_malware_samples//2:]
-        
-        # Add in goodware samples
-        if gw_split1:
-            first_half += goodware_samples[:total_malware_samples//2]
-        
-        if gw_split2:
-            second_half += goodware_samples[total_malware_samples//2:]
+        all_samples = shuffle(indexes, random_state=3)
+        first_half = all_samples[:total_number_of_samples//2]
+        second_half = all_samples[total_number_of_samples//2:]
             
         return first_half, second_half
     
@@ -438,7 +439,9 @@ class Analysis():
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
-                selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
+                # selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
+                selected_indexes = self.family_selection_from_index_recreate(self.initial_test[group],family)
+
             else:
                 selected_indexes = self.initial_test[group]
             
@@ -446,7 +449,7 @@ class Analysis():
                 first_half, _ = self.stratified_split(selected_indexes)
             else:
                 first_half, _ = self.random_split(selected_indexes)
-                
+            
             X_test = self.X[first_half]
             y_test = self.y[first_half]
             
@@ -538,6 +541,7 @@ class Analysis():
             
         
         trained_model, trained_amount = self.training(training_family)
+        exit()
         if experiment.lower() == 'base':
             self.testing(trained_model, trained_amount, testing_family)
         elif experiment.lower() == 'half':
