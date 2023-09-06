@@ -223,7 +223,8 @@ class Analysis():
     
     def training(self, family=None):
         """Function that trains a model using initial training set
-
+        # TODO: Add arguments for adding extra samples depending on family and month
+        
         Args:
             family (list, optional): List of families selected for training, if None then
             all familes are used.
@@ -234,25 +235,24 @@ class Analysis():
         """        
         
         # Select samples of chosen families   
-        if family != None:
-            family = list(map(str.upper,family))
-            # selected_indexes = self.family_selection_from_index(self.initial_train,family)
-            selected_indexes = self.family_selection_from_index_recreate(self.initial_train, family)
-        else:
-            selected_indexes = self.initial_train
+        selected_indexes = []
+        for train_group in range(len(self.initial_train)):
+            if family != None:
+                family = list(map(str.upper,family))
+                selected_indexes += self.family_selection_from_index(self.initial_train[train_group],family)
+            else:
+                selected_indexes += self.initial_train[train_group]
         
-        # # Add extra training samples from test set
-        # selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
-            
-        # Initial model
-        print(self.md5[selected_indexes])
-        exit()
+        # Add extra training samples from test set
+        selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
+                
         model = self.train_secml_model(self.X[selected_indexes], self.y[selected_indexes])
 
         # Evaluate trained model
         *eval_out, = self.evaluate_model(model, self.X[selected_indexes], self.y[selected_indexes])
         print("Trained model with initial training set of length {}".format(len(selected_indexes)))
         print("Achieved accuracy of {0:3f} and f1 score of {1:3f}".format(eval_out[0], eval_out[1]))
+
         
         # Set up explainer and compute explanations
         explainer = explanations.Explain()
@@ -403,7 +403,7 @@ class Analysis():
             
         return first_half, second_half
     
-    def random_split(self, indexes):
+    def random_split(self, indexes, gw_split1=True, gw_split2=True):
         """Helper function that does random split. Has option to add/remove
         goodware in first/second half.
 
@@ -420,13 +420,32 @@ class Analysis():
         all_samples = shuffle(indexes, random_state=3)
         first_half = all_samples[:total_number_of_samples//2]
         second_half = all_samples[total_number_of_samples//2:]
+        
+        # Filter out goodware depending on arguments
+        if gw_split1:
+            first_half_filtered = first_half
+        else:
+            first_half_filtered = []
+            for idx in first_half:
+                if self.y[idx] == 1:
+                    first_half_filtered.append(idx)
+        
+        if gw_split2:
+            second_half_filtered = second_half
+        else:
+            second_half_filtered = []
+            for idx in second_half:
+                if self.y[idx] == 1:
+                    second_half_filtered.append(idx)
+        
             
-        return first_half, second_half
+        return first_half_filtered, second_half_filtered
     
     
     def testing_half_group(self, model, training_amount, family=None, strat_split=True):
         """Experiment that tests on half of each group. Stratified
-        Sampling is used to ensure even split in families
+        Sampling is used to ensure even split in families. However, there is option to turn
+        off stratified sampling which recreates paper results using random split.
 
         Args:
             model (object): Pretrained model
@@ -439,19 +458,19 @@ class Analysis():
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
-                # selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
-                selected_indexes = self.family_selection_from_index_recreate(self.initial_test[group],family)
-
+                selected_indexes = self.family_selection_from_index(self.initial_test[group],family)
             else:
                 selected_indexes = self.initial_test[group]
             
             if strat_split:
                 first_half, _ = self.stratified_split(selected_indexes)
             else:
+                selected_indexes = self.family_selection_from_index_recreate(self.initial_test[group],family)
                 first_half, _ = self.random_split(selected_indexes)
             
             X_test = self.X[first_half]
-            y_test = self.y[first_half]
+            y_test = self.y[first_half]         
+            
             
             # Evaluate trained model
             *eval_out, = self.evaluate_model(model, X_test, y_test)
@@ -479,7 +498,9 @@ class Analysis():
             all familes are used.
         """              
         family = list(map(str.upper,family))
-        train_selected_indexes = self.family_selection_from_index(self.initial_train, family)
+        train_selected_indexes = [] 
+        for train_group in range(len(self.initial_train)):
+            train_selected_indexes += self.family_selection_from_index(self.initial_train[train_group],family)
           
         explainer = explanations.Explain()
         for group in range(len(self.initial_test)):
@@ -493,6 +514,7 @@ class Analysis():
             if strat_split:
                 first_half, second_half = self.stratified_split(selected_indexes, gw_split2=gw_split2)
             else:
+                selected_indexes = self.family_selection_from_index_recreate(self.initial_test[group],family)
                 first_half, second_half = self.random_split(selected_indexes, gw_split2=gw_split2)
                 
             X_test = self.X[first_half]
@@ -541,7 +563,6 @@ class Analysis():
             
         
         trained_model, trained_amount = self.training(training_family)
-        exit()
         if experiment.lower() == 'base':
             self.testing(trained_model, trained_amount, testing_family)
         elif experiment.lower() == 'half':
@@ -568,7 +589,6 @@ class Analysis():
             testing_family = ['ALL']
         else:
             testing_family = list(map(str.upper,testing_family))
-        
         
         self.save_results(experiment, training_family, testing_family, dataset)
         print("Done")

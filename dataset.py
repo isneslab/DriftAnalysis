@@ -39,7 +39,7 @@ class Dataset():
         self.md5 = md5
 
 
-    def time_aware_split_index(self, granularity, train_window, test_window):
+    def time_aware_split_index(self, granularity, train_windows, test_window):
         """Function that partitions list t by time
 
         Args:
@@ -62,15 +62,20 @@ class Dataset():
         indexes = [tup[1] for tup in time_sorted_with_index]
 
         # Get earliest start date
-        start_date = time_sorted_with_index[0][0]
         
-        # Slice out training partition
-        relative_date = start_date + get_relative_delta(train_window, granularity)
+        trains = []
+        from_idx = 0
+        for _ in range(train_windows):   
+            # Slice out training partition
+            relative_date = dates[from_idx] + get_relative_delta(1, granularity)
 
-        # Calculate last day of the month
-        boundary = relative_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        to_idx = bisect.bisect_left(dates, boundary)
-        train = indexes[:to_idx]        
+            # Calculate last day of the month
+            boundary = relative_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            
+            
+            to_idx = bisect.bisect_left(dates, boundary)
+            trains.append(indexes[from_idx:to_idx])
+            from_idx = to_idx       
         
         tests = []
         while to_idx < len(indexes):
@@ -86,8 +91,13 @@ class Dataset():
         for test in tests:
             new_test = sorted(test)
             new_tests.append(new_test)
-
-        return train, new_tests
+            
+        new_trains = []
+        for train in trains:
+            new_train = sorted(train)
+            new_trains.append(new_train)
+            
+        return new_trains, new_tests
     
     
     def family_selection(self, families):
