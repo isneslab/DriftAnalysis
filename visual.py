@@ -76,8 +76,8 @@ class Viz():
         
         rc('font', **{'size': 40, 'family': 'serif', 'serif': ['Computer Modern Roman']})
         rc('text', usetex=True)
-        rc('xtick', labelsize=30)
-        rc('ytick', labelsize=30)
+        rc('xtick', labelsize=40)
+        rc('ytick', labelsize=40)
         rc('legend', fontsize=30)
         rcParams['figure.figsize'] = [16, 10]
     
@@ -102,18 +102,18 @@ class Viz():
         if self.results2 != None:   
             y2_f1 = self.results2['f1'][1:]
             ax.plot(x, y2_f1, color = ColorMap['F1'].value, markersize=7, marker="o", 
-                       label=f'F1 {self.label2}', linewidth=2)
+                       label=f'F1', linewidth=2)
             alpha_1 = 0.3
         else:
             ax.plot(x, y1_recall, color= ColorMap['RECALL'].value, markersize=7, 
-                    marker="^", label=f'Recall {self.label1}', linewidth=2)
+                    marker="^", label=f'Recall', linewidth=2)
             
             ax.plot(x, y1_prec, color= ColorMap['PREC'].value, markersize=7, 
-                    marker="s", label=f'Precision {self.label1}', linewidth=2)
+                    marker="s", label=f'Precision', linewidth=2)
 
         # Plot f1 score for results 1
         ax.plot(x, y1_f1, color = ColorMap['F1'].value, markersize = 7, marker="o",
-                label=f'F1 {self.label1}', linewidth=2, alpha=alpha_1)
+                label=f'F1 ', linewidth=2, alpha=alpha_1)
         ax.fill_between(x, 0, y1_f1, facecolor='none', hatch='/',
                         edgecolor='#BCDEFE', rasterized=True)
 
@@ -124,7 +124,7 @@ class Viz():
         ax.set_xticks(np.arange(-6,months_of_x-7))
         ax.set_xticklabels(labels_x)
         ax.set_ylabel("Performance")
-        ax.legend(loc='best', fontsize=15)
+        ax.legend(loc='best')
         ax.set_xlim(-6.5,months_of_x-7)
     
     def gradient_poi_selection(self,ax):
@@ -211,7 +211,7 @@ class Viz():
         ax.set_xticks(np.arange(-6,months_of_x-7))
         ax.set_xticklabels(labels_x)
         ax.set_ylabel('\# of samples')
-        ax.legend(loc='best', fontsize=15)
+        ax.legend(loc='best')
         ax.set_xlim(-6.5,months_of_x-7)
         plt.grid(visible=True, which='major', axis="y")
 
@@ -297,7 +297,7 @@ class Viz():
             
             # Remove negatives and NAN
             true_positive_diff_norm = [x if x >= 0 else 0 for x in true_positive_diff_norm]
-            print(true_positive_diff_norm, family)
+
             # Plot bar plot
             ax.bar(X, true_positive_diff_norm, color=ColorMap[family].value,\
                   label = family.capitalize(), bottom=previous_count)
@@ -314,7 +314,7 @@ class Viz():
         ax.set_ylabel(f"Difference of true positives\nof \
                       {self.label1} and {self.label2} normalised")
         ax.set_ylim(0,1)
-        ax.legend(loc='best', fontsize=15)
+        ax.legend(loc='best')
 
     
     def tsne(self):
@@ -374,7 +374,7 @@ class Viz():
             return None
         
         plt.xlabel('Month')
-        plt.grid()
+        plt.grid(visible=True, which='major', axis="y")
         plt.show()
         
         
@@ -539,29 +539,105 @@ class VizExpl():
                     if running_count >= count:
                         break
                 
+class FamilyIso(Viz):
+    def __init__(self, results1, results2, results3, results4, results5):
+        self.results = [results1, results2, results3, results4, results5]
+        
+    def plot_family_iso_matrix(self):
+        
+        fig, ax = plt.subplots(5,6, sharex=True, sharey=True)
+        
+        testing_families = ['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB','GOODWARE']
+        
+        # Get all training familes
+        training_families = []
+        for n in range(len(self.results)):
+            training_families.append(self.results[n]['test_amount'][0][0][0])
+
+        # Get total number of samples
+        grand_total = []
+        for month in self.results[0]['total_family'][6:]:
+            grand_total.append(sum(month.values()))
                 
-    
-    
+        for x, training_family in enumerate(training_families):
+            total = self.results[x]['total_family']
+            correct = self.results[x]['correct_family']
+            output = []
+            for y, testing_family in enumerate(testing_families):
+                total_family = []
+                correct_family = []
+                for month in total:
+                    if testing_family in month:
+                        total_family.append(month[testing_family])
+                    else:
+                        total_family.append(0)
+                for month in correct:
+                    if testing_family in month:
+                        correct_family.append(month[testing_family])
+                    else:
+                        correct_family.append(0)
+                
+                total_family_normalised = np.divide(total_family[6:],grand_total)
+                correct_family_normalised = np.divide(correct_family,grand_total)
+
+                ax[x, y].plot(np.arange(len(total_family_normalised)),total_family_normalised, color='black')
+                ax[x, y].fill_between(np.arange(len(correct_family_normalised)),0,correct_family_normalised,facecolor=ColorMap[testing_family].value)
+                
+                output.append(round((sum(correct_family_normalised)/sum(total_family_normalised))*100,2))
+                
+                if x == 0:
+                    ax[x,y].set_title(testing_family, fontsize=25)
+                if y == 0:
+                    ax[x,y].set_ylabel(training_family, fontsize=20)
+
+                if y == len(training_familes)-1:
+                    labels_x = [a if (a % 5 ==0 or a == 1) else '' for a in range(1,55)]
+                    ax[x,y].set_xticks(np.arange(54))
+                    ax[x,y].set_xticklabels(labels_x)
+                    
+            print(output)
+                    
+        plt.subplots_adjust(hspace = 0.05, wspace = 0.05)
+        plt.show()
+            
+        
+        
     
 if __name__=='__main__':
     print("Visual module")
     training_familes = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
     testing_families = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
     # ResultsLoader().query_database_for_ID('snoop',training_familes,testing_families,'Transcend')
-    c1 = ResultsLoader().load_file_from_id(14) # half
-    c2 = ResultsLoader().load_file_from_id(15) # snoop
-    c3 = ResultsLoader().load_file_from_id(17) # snoop no gw
-    all = ResultsLoader().load_file_from_id(18) # all families
-    dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
-    all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
-    dnotua_all_ish = ResultsLoader().load_file_from_id(20) # all families (actually just 20) + dnotua month 31
-    c1_random = ResultsLoader().load_file_from_id(24) # half random
-    c2_random = ResultsLoader().load_file_from_id(22) # snoop random
-    c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
-    visual = Viz(c1_random, c2_random)
-    visual.plot_performance_distribution()
-    # visual.plot_single('difference', month_selection=[27, 33,43])
+    # c1 = ResultsLoader().load_file_from_id(14) # half
+    # c2 = ResultsLoader().load_file_from_id(15) # snoop
+    # c3 = ResultsLoader().load_file_from_id(17) # snoop no gw
+    # all = ResultsLoader().load_file_from_id(18) # all families
+    # dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
+    # all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
+    # dnotua_all_ish = ResultsLoader().load_file_from_id(39) # all families (actually just 20) + dnotua month 31    
+    # c1_random = ResultsLoader().load_file_from_id(31) # half random + fixed incorrect sampling
+    # c2_random = ResultsLoader().load_file_from_id(32) # snoop random + fixed incorrect sampling
+    # c3_random = ResultsLoader().load_file_from_id(34) # snoop no gw random + fixed incorrect sampling
+    # all = ResultsLoader().load_file_from_id(37) # All families
+    # dnotua_all = ResultsLoader().load_file_from_id(38) # All familes + dnotua training
+    # dnotua4_all = ResultsLoader().load_file_from_id(39) # All families + dnotua 4 training
+    # dnotua3_all = ResultsLoader().load_file_from_id(41) # All families + dnotua 3 training
+    
+    dowgin_train = ResultsLoader().load_file_from_id(44) # Train on dowgin
+    dnotua_train = ResultsLoader().load_file_from_id(48) # Train on dnotua
+    kuguo_train = ResultsLoader().load_file_from_id(45) # Train on kuguo
+    airpush_train = ResultsLoader().load_file_from_id(46) # Train on airpush
+    revmob_train = ResultsLoader().load_file_from_id(47) # Train on revmob
+    
+    
+    
+    
+    # visual = Viz(dowgin_train)
+    # visual.plot_performance_distribution()
+    # visual.plot_single('performance')
     
     # VizExpl(c3,c2).feature_difference(group_selection=[40, 45, 50])
     # VizExpl(c2).get_top_feature_for_sample('b073f248d7817bced11e07bb4fcb5c43')
     # VizExpl(c1).get_samples_from_group(group_selection=[46],family_selection=['Dnotua'])
+    
+    FamilyIso(dowgin_train,dnotua_train,kuguo_train,airpush_train,revmob_train).plot_family_iso_matrix()
