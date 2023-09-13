@@ -548,17 +548,17 @@ if __name__=='__main__':
     training_familes = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
     testing_families = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
     # ResultsLoader().query_database_for_ID('snoop',training_familes,testing_families,'Transcend')
-    c1 = ResultsLoader().load_file_from_id(14) # half
-    c2 = ResultsLoader().load_file_from_id(15) # snoop
-    c3 = ResultsLoader().load_file_from_id(17) # snoop no gw
-    all = ResultsLoader().load_file_from_id(18) # all families
-    dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
-    all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
-    dnotua_all_ish = ResultsLoader().load_file_from_id(20) # all families (actually just 20) + dnotua month 31
-    c1_random = ResultsLoader().load_file_from_id(24) # half random
-    c2_random = ResultsLoader().load_file_from_id(22) # snoop random
-    c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
-    visual = Viz(c1_random, c2_random)
+    # c1 = ResultsLoader().load_file_from_id(10) # half
+    # c2 = ResultsLoader().load_file_from_id(11) # snoop
+    # c3 = ResultsLoader().load_file_from_id(17) # snoop no gw
+    # all = ResultsLoader().load_file_from_id(18) # all families
+    # dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
+    # all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
+    # dnotua_all_ish = ResultsLoader().load_file_from_id(20) # all families (actually just 20) + dnotua month 31
+    c1_random = ResultsLoader().load_file_from_id(12) # half random
+    c2_random = ResultsLoader().load_file_from_id(13) # snoop random
+    # c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
+    visual = Viz(c1_random,c2_random)
     visual.plot_performance_distribution()
     # visual.plot_single('difference', month_selection=[27, 33,43])
     

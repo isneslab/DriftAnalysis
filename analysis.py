@@ -244,7 +244,7 @@ class Analysis():
                 selected_indexes += self.initial_train[train_group]
         
         # Add extra training samples from test set
-        selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
+        # selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
                 
         model = self.train_secml_model(self.X[selected_indexes], self.y[selected_indexes])
 
