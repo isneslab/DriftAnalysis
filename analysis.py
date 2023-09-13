@@ -221,13 +221,14 @@ class Analysis():
         
         return final_output
     
-    def training(self, family=None):
+    def training(self, family=None, additional_months=False):
         """Function that trains a model using initial training set
-        # TODO: Add arguments for adding extra samples depending on family and month
+        TODO: Add arguments for adding extra samples depending on family and month
         
         Args:
             family (list, optional): List of families selected for training, if None then
             all familes are used.
+            additional_months (bool, optional): Whether to add additional training months
 
         Returns:
             object: Trained model
@@ -244,7 +245,13 @@ class Analysis():
                 selected_indexes += self.initial_train[train_group]
         
         # Add extra training samples from test set
-        # selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
+        if additional_months:
+            selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[32],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[33],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[34],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[35],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[36],['DNOTUA'])
                 
         model = self.train_secml_model(self.X[selected_indexes], self.y[selected_indexes])
 
@@ -261,7 +268,6 @@ class Analysis():
         
         # Get total families for each month in training set and update it. Also family labels
         family_labels_array = self.get_family_count_in_training(selected_indexes)
-        
         # Update results
         self.update_performance_results(*eval_out[:-1], len(selected_indexes),
                                         family_labels_array,[explanations_results, self.md5[selected_indexes]])
@@ -548,37 +554,40 @@ class Analysis():
         Args:
             training_family (np.array): Array of indexes of training samples
             testing_family (np.array): Array of array of indexes of test samples 
-            experiment (str): Experiment to run, expects one of 'base', 'half','snoop' 
+            experiment (str): Experiment to run
             dataset (str): Dataset being used, this is only for logging purposes
         """        
         # Main experiment that runs training and testing given certain params
         # then saves them in sqlite database
         
-        available_experiments = ['base','half','snoop','nogwsnoop','half_random','snoop_random','nogwsnoop_random']
+        available_experiments = ['base','half','snoop','nogwsnoop','half_random','snoop_random','nogwsnoop_random','base_additional']
         
         if experiment.lower() not in available_experiments:
             print("Error: Experiment not recognised, \
-                  try: base|half|snoop|nogwsnoop|half_random|snoop_random|nogwsnoop_random")
+                  try: base|half|snoop|nogwsnoop|half_random|snoop_random|nogwsnoop_random|base_additional")
             exit()
             
-        
-        trained_model, trained_amount = self.training(training_family)
-        if experiment.lower() == 'base':
+        if experiment.lower() == 'base_additional':
+            trained_model, trained_amount = self.training(training_family, additional_months=True)
             self.testing(trained_model, trained_amount, testing_family)
-        elif experiment.lower() == 'half':
-            self.testing_half_group(trained_model, trained_amount,testing_family)
-        elif experiment.lower() == 'snoop':
-            self.testing_half_group_snooped(testing_family)
-        elif experiment.lower() == 'nogwsnoop':
-            self.testing_half_group_snooped(testing_family, gw_split2=False)
-        elif experiment.lower() == 'half_random':
-            self.testing_half_group(trained_model, trained_amount,testing_family, strat_split=False)
-        elif experiment.lower() == 'snoop_random':
-            self.testing_half_group_snooped(testing_family, strat_split=False)
-        elif experiment.lower() == 'nogwsnoop_random':
-            self.testing_half_group_snooped(testing_family, gw_split2=False, strat_split=False)
         else:
-            pass
+            trained_model, trained_amount = self.training(training_family)
+            if experiment.lower() == 'base':
+                self.testing(trained_model, trained_amount, testing_family)
+            elif experiment.lower() == 'half':
+                self.testing_half_group(trained_model, trained_amount,testing_family)
+            elif experiment.lower() == 'snoop':
+                self.testing_half_group_snooped(testing_family)
+            elif experiment.lower() == 'nogwsnoop':
+                self.testing_half_group_snooped(testing_family, gw_split2=False)
+            elif experiment.lower() == 'half_random':
+                self.testing_half_group(trained_model, trained_amount,testing_family, strat_split=False)
+            elif experiment.lower() == 'snoop_random':
+                self.testing_half_group_snooped(testing_family, strat_split=False)
+            elif experiment.lower() == 'nogwsnoop_random':
+                self.testing_half_group_snooped(testing_family, gw_split2=False, strat_split=False)
+            else:
+                pass
         
         if training_family == None:
             training_family = ['ALL']
