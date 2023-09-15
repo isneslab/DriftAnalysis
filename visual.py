@@ -35,7 +35,6 @@ class ResultsLoader():
         
         query = "SELECT rowid, Date, Results from result WHERE {}".format(condition)
         c.execute(query)
-        
         files = c.fetchall()
         conn.commit()
         conn.close()
@@ -322,11 +321,6 @@ class Viz():
         # maybe put this in seperate class
         pass
     
-    def family_matrix(self):
-        # family train on 1 test on rest plots
-        # maybe put this in seperate class
-        pass
-    
     
     def plot_performance_distribution(self, poi=True):
         """Function that creates performance plot on the top and distribution
@@ -384,69 +378,6 @@ class VizExpl():
         self.results2 = results2
         self.label1 = label1
         self.label2 = label2
-
-        
-    def get_explanations_mean(self, result, family_select):
-        """Calculate the mean of the explanations
-
-        Args:
-            result (list): Dictionary of results
-            family_select (list): List of samples to consider
-
-        Returns:
-            list: List of meaned explanationed
-        """        
-        # If family select, compute a filter list
-        filter_list = []
-        if family_select != None:
-            for group in result['family_class']:
-                filter_group = []
-                for idx, sample in enumerate(group):
-                    if sample[1] in family_select:
-                        filter_group.append(idx)
-            
-                filter_list.append(filter_group)
-                
-        output = []
-        # Take the mean of every sample
-        for group_num, group in enumerate(result['explanations'][1:]):
-            if isinstance(group[0], np.ndarray):
-                if filter_list != []:
-                    if filter_list[group_num] != []:
-                        explanations = group[0][filter_list[group_num]]
-                    else:
-                        output.append(0)
-                else:
-                    explanations = group[0]
-                output.append(np.mean(explanations, axis=0))
-            else:
-                output.append(0)
-    
-        return output
-    
-    def get_top_features(self, result, family_select=None, k=5):
-        """Get the top features of each month and returns a filter for them
-
-        Args:
-            result (dict): Dictionary of result
-            family_select (list, optional): List of families to filter, if None then all families.
-            k (int, optional): Number of top features to show. Defaults to 5.
-
-        Returns:
-            list: List of filters for top k
-        """        
-        
-        expl_mean = self.get_explanations_mean(result, family_select)
-        output = []
-        
-        for group in expl_mean:
-            if isinstance(group, np.ndarray):
-                topk_filter = group.argsort(axis=0)[::-1][:k]
-                output.append(topk_filter)
-            else:
-                output.append('None')
-        
-        return output
     
     def get_top_feature_for_sample(self, md5_sample, k=5):
         """Given an md5 sample, get the top feature of it if its in
@@ -538,13 +469,165 @@ class VizExpl():
                     running_count += 1
                     if running_count >= count:
                         break
-                
+    
+    def top_features_of_given_family(self, group_selection,family_selection, k=5):
+        """Get the top features of a given family for given months. Prints out
+        results in table format. This replicates table 5 & 6 of the paper.
+
+        Args:
+            result (list): Dictionary of results
+            family_select (list): List of families to filter    
+
+        Returns:
+            numpy.ndarray: Array of indexes sorted
+            numpy.ndarray: Raw explanation value unsorted
+
+        """   
+        filtered_list = self.get_explanations_mean_filter(self.results1, family_selection)
+        topk, explanations = self.get_top_features_month(self.results1, filtered_list)
+        feature_names = self.results1['feature_names']
+
+        for family in family_selection:
+            for group in group_selection:
+                print(f"Top {k} feature(s) for group {group} for family {family}")
+                for i, sample in enumerate(topk[group-1][:k]):
+                    print(i, feature_names[sample], explanations[group-1][sample])
+
+
+    def get_explanations_mean_filter(self, result, family_select, result_orig = []):
+        """Filter out explanation samples for mean calculation, with the option of
+        selecting missed samples only
+
+        Args:
+            result (list): Dictionary of results snooped
+            family_select (list): List of samples to consider
+            result_orig (list, optional): Dictionary of results unsnooped
+
+        Returns:
+            list: List of filtered samples
+        """     
+        filter_list = []
+        if family_select != None:
+            for group_num, group in enumerate(result['family_class']):
+                filter_group = []
+                for idx, sample in enumerate(group):
+                    if sample[1] in family_select:
+                        if result_orig == []:
+                            filter_group.append(idx)
+                        else:
+                            # If select missed samples only
+                            if sample[0] == 1 and result_orig['family_class'][group_num][idx][0] == 0:
+                                filter_group.append(idx)
+
+                filter_list.append(filter_group)
+            
+        return filter_list
+
+    def get_explanations_mean_calculation(self, result, filter_list):
+        """Calculate the mean of the explanations given a filter list
+
+        Args:
+            result (list): Dictionary of results snooped
+            filter_list (list): List of samples to use for calculation
+
+        Returns:
+            list: List of meaned explanations
+        """                        
+        output = []
+        # Take the mean of every sample
+        for group_num, group in enumerate(result['explanations'][1:]):
+            if isinstance(group[0], np.ndarray):
+                if filter_list != []:
+                    if filter_list[group_num] != []:
+                        explanations = group[0][filter_list[group_num]]
+                    else:
+                        explanations = [np.zeros(1000), np.zeros(1000)]
+                else:
+                    explanations = group[0]
+                output.append(np.mean(explanations, axis=0))
+            else:
+                output.append(0)
+    
+        return output
+    
+    def get_top_features(self, result, filter_list):
+        """Get the mean of weights of all samples from selected family to produce
+        a global explanation
+
+        Args:
+            result (list): Dictionary of results
+            family_select (list): List of families to filter    
+
+        Returns:
+            numpy.ndarray: Array of indexes sorted
+            numpy.ndarray: Raw explanation value unsorted
+
+        """   
+        explanation_per_month = self.get_explanations_mean_calculation(result, filter_list)
+        global_explanation = np.mean(explanation_per_month, axis=0)
+        sorted_global_explanation = np.argsort(global_explanation)[::-1]
+
+        return sorted_global_explanation, global_explanation
+    
+    def get_top_features_month(self, result, filter_list):
+        """Get the mean of weights of all samples from selected family to produce
+        a global explanation. This is only done for each month, hence returned
+        array is split in to multiple months
+
+        Args:
+            result (list): Dictionary of results
+            family_select (list): List of families to filter    
+
+        Returns:
+            numpy.ndarray: Array of indexes sorted
+            numpy.ndarray: Raw explanation value unsorted
+
+        """   
+        explanation_per_month = self.get_explanations_mean_calculation(result, filter_list)
+        sorted_global_explanation = []
+        for explanations in explanation_per_month:
+            sorted_global_explanation.append(np.argsort(explanations)[::-1])
+
+        return sorted_global_explanation, explanation_per_month
+
+
+    def mean_of_weights_of_top_feature_of_missed_family_samples(self, family_selection, k=5, missed=False):
+        """Get the mean of weights of top features of all samples from selected family. Prints
+        result as a table. This replicates table 1 and 3 of the paper.
+
+        Args:
+            family_select (list): List of families to filter            
+            k (int, optional): Number of top features to show. Defaults to 5.
+
+        """        
+        if missed:
+            filtered_list = self.get_explanations_mean_filter(self.results2, family_selection,self.results1)
+        else:
+            filtered_list = self.get_explanations_mean_filter(self.results2, family_selection)
+
+        _, values1 = self.get_top_features(self.results1, filtered_list)
+        topk_features2, values2 = self.get_top_features(self.results2, filtered_list)
+
+        # Print result as table 
+        print("Top 5 features of C2 and their value changes from C1 to C2")
+        print('-'*10)
+        for n in range(5):
+            print(self.results1['feature_names'][topk_features2][n], round(values1[topk_features2][n],3), \
+                  round(values2[topk_features2][n],3), str(round((values2[topk_features2][n]/values1[topk_features2][n]*100),3)) + "%")
+
+        
+
+
+
 class FamilyIso(Viz):
     def __init__(self, results1, results2, results3, results4, results5):
         self.results = [results1, results2, results3, results4, results5]
         
     def plot_family_iso_matrix(self):
-        
+        """Plots recall of solo train experiments and prints output as table. This replicates 
+        table 7 of the paper.
+        """     
+
         fig, ax = plt.subplots(5,6, sharex=True, sharey=True)
         
         testing_families = ['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB','GOODWARE']
@@ -577,13 +660,13 @@ class FamilyIso(Viz):
                     else:
                         correct_family.append(0)
                 
-                total_family_normalised = np.divide(total_family[6:],grand_total)
-                correct_family_normalised = np.divide(correct_family,grand_total)
+                # total_family_normalised = np.divide(total_family[6:],grand_total)
+                correct_family_normalised = np.divide(correct_family,total_family[6:])
 
-                ax[x, y].plot(np.arange(len(total_family_normalised)),total_family_normalised, color='black')
+                # ax[x, y].plot(np.arange(len(total_family_normalised)),total_family_normalised, color='black')
                 ax[x, y].fill_between(np.arange(len(correct_family_normalised)),0,correct_family_normalised,facecolor=ColorMap[testing_family].value)
                 
-                output.append(round((sum(correct_family_normalised)/sum(total_family_normalised))*100,2))
+                output.append(round((sum(correct_family_normalised)/sum(total_family[6:]))*100,2))
                 
                 if x == 0:
                     ax[x,y].set_title(testing_family, fontsize=25)
@@ -615,15 +698,23 @@ if __name__=='__main__':
     # dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
     # all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
     # dnotua_all_ish = ResultsLoader().load_file_from_id(20) # all families (actually just 20) + dnotua month 31
-    c1_random = ResultsLoader().load_file_from_id(12) # half random
+    c1_random = ResultsLoader().load_file_from_id(17) # half random
     c2_random = ResultsLoader().load_file_from_id(13) # snoop random
     # c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
+
+
+
+
+
     visual = Viz(c1_random,c2_random)
     visual.plot_performance_distribution()
     # visual.plot_single('difference', month_selection=[27, 33,43])
     
-    # VizExpl(c3,c2).feature_difference(group_selection=[40, 45, 50])
+    # VizExpl(c2_random).top_features_of_given_family([1,25,52],['AIRPUSH'])
+    # VizExpl(c1_random,c2_random).mean_of_weights_of_top_feature_of_missed_family_samples(['AIRPUSH'], missed=False)
+
+    # VizExpl(c2_random,c1_random).feature_difference(group_selection=[45],family_select=['DNOTUA'])
     # VizExpl(c2).get_top_feature_for_sample('b073f248d7817bced11e07bb4fcb5c43')
     # VizExpl(c1).get_samples_from_group(group_selection=[46],family_selection=['Dnotua'])
     
-    FamilyIso(dowgin_train,dnotua_train,kuguo_train,airpush_train,revmob_train).plot_family_iso_matrix()
+    # FamilyIso(dowgin_train,dnotua_train,kuguo_train,airpush_train,revmob_train).plot_family_iso_matrix()

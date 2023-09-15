@@ -14,6 +14,7 @@ import os
 import pandas as pd
 from tqdm import tqdm
 import pickle
+import util
 
 from sklearn.feature_extraction import DictVectorizer
 
@@ -123,6 +124,11 @@ def load_transcend(X, y, meta_info, meta_family):
             pickle.dump([index_with_families,f],file)
 
     print("Family labels loaded")
+
+    X, feature_names = util.feature_reduction(X, y, feature_names, "pkl_files/feature_index_1000_before_greyware.pkl", feature_size=1000)
+
+
+
     y = y[index_with_families]
     X = X[index_with_families]
     t = t[index_with_families]

@@ -179,8 +179,12 @@ class Analysis():
             
         # Execute and commit
         c.execute(query, values)
+        lastrowid = c.lastrowid
+        print(f"Saved result with ID {lastrowid}")
         conn.commit()
         conn.close()
+
+        return lastrowid
 
     def create_database(self):
         """Function that creates a sqlite database if one
@@ -599,5 +603,6 @@ class Analysis():
         else:
             testing_family = list(map(str.upper,testing_family))
         
-        self.save_results(experiment, training_family, testing_family, dataset)
+        lastrowid = self.save_results(experiment, training_family, testing_family, dataset)
         print("Done")
+        return lastrowid
