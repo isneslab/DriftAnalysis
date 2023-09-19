@@ -11,8 +11,57 @@ import numpy as np
 import pickle
 from matplotlib import pyplot as plt
 from matplotlib import rcParams, rc
+from matplotlib import colors, cm
 from colors import ColorMap
+import os
 
+
+def save_output(fname="output.pdf"):
+    fpath = os.path.join('results', fname)
+    print(fpath)
+    plt.savefig(fpath, bbox_inches='tight')
+
+class DimensionReduction():
+    def __init__(self):
+        rc('font', **{'size': 20, 'family': 'serif', 'serif': ['Computer Modern Roman']})
+        rc('text', usetex=True)
+        rc('xtick', labelsize=15)
+        rc('ytick', labelsize=15)
+        rcParams['figure.figsize'] = [16, 7]
+        
+    def tsne_visual(self, families, fname='output.pdf'):
+        fig, axs = plt.subplots(1,5)
+        maxlim = (-1000,1000)
+        
+        colormap = plt.get_cmap('plasma')
+        colors_list = [colormap(i) for i in np.linspace(0, 1, 60)]
+
+        cbar_ax = fig.add_axes([0.2, 0.25, 0.7, 0.05])
+        norm = colors.Normalize(vmin=0, vmax=60)
+        fig.colorbar(cm.ScalarMappable(norm=norm, cmap=colormap),
+                cax=cbar_ax, orientation='horizontal', label='Months')
+    
+    
+        for idx, family in enumerate(families):
+            with open(f"pkl_files/tsne_{family}.pkl",'rb') as f:
+                tsne_result = pickle.load(f)
+                
+            for group in range(len(tsne_result)):
+                if len(tsne_result[group]) > 0:
+                    axs[idx].scatter(x=tsne_result[group][:,0], y=tsne_result[group][:,1], s=30, marker='o', color=colors_list[group])
+
+            axs[idx].set_title(family)
+            axs[idx].set_xlabel('')
+            axs[idx].set_ylabel('')
+            axs[idx].set_aspect('equal')
+            axs[idx].set_xlim(maxlim)
+            axs[idx].set_ylim(maxlim)
+            if idx > 0:
+                axs[idx].set_yticklabels('')
+        fig.subplots_adjust(right=0.95, wspace=0.4,top=0.98)
+        plt.tight_layout()
+        save_output(fname)
+        
 class ResultsLoader():
     def __init__(self):
         pass
@@ -58,7 +107,7 @@ class ResultsLoader():
 
 
 class Viz():
-    def __init__(self, results1, results2=None, label1='C1', label2='C2'):
+    def __init__(self, results1, results2=None, label1='', label2=''):
         """Base visual class that set global matplotlib parameters and inputs
         used for plotting
 
@@ -77,7 +126,7 @@ class Viz():
         rc('text', usetex=True)
         rc('xtick', labelsize=40)
         rc('ytick', labelsize=40)
-        rc('legend', fontsize=30)
+        rc('legend', fontsize=25)
         rcParams['figure.figsize'] = [16, 10]
     
     def performance(self, ax):
@@ -101,7 +150,7 @@ class Viz():
         if self.results2 != None:   
             y2_f1 = self.results2['f1'][1:]
             ax.plot(x, y2_f1, color = ColorMap['F1'].value, markersize=7, marker="o", 
-                       label=f'F1', linewidth=2)
+                       label=f'F1 {self.label2} ', linewidth=2)
             alpha_1 = 0.3
         else:
             ax.plot(x, y1_recall, color= ColorMap['RECALL'].value, markersize=7, 
@@ -112,7 +161,7 @@ class Viz():
 
         # Plot f1 score for results 1
         ax.plot(x, y1_f1, color = ColorMap['F1'].value, markersize = 7, marker="o",
-                label=f'F1 ', linewidth=2, alpha=alpha_1)
+                label=f'F1 {self.label1} ', linewidth=2, alpha=alpha_1)
         ax.fill_between(x, 0, y1_f1, facecolor='none', hatch='/',
                         edgecolor='#BCDEFE', rasterized=True)
 
@@ -126,7 +175,7 @@ class Viz():
         ax.legend(loc='best')
         ax.set_xlim(-6.5,months_of_x-7)
     
-    def gradient_poi_selection(self,ax):
+    def gradient_poi_selection(self,ax, k=3):
         """Function that selectionos POI by first calculating the difference of F1
         between 2 plots, then its change between X(t+1) and X(t). Plots the result
         along with markers for top 3 POI
@@ -148,7 +197,8 @@ class Viz():
         result = np.array(result)
 
         # Select markers to plot
-        markers_on = result.argsort(axis=0)[::-1][:3]
+        markers_on = result.argsort(axis=0)[::-1][:k]
+        print(markers_on)
         x = np.arange(len(result))
         
         # Plot result
@@ -313,16 +363,9 @@ class Viz():
         ax.set_ylabel(f"Difference of true positives\nof \
                       {self.label1} and {self.label2} normalised")
         ax.set_ylim(0,1)
-        ax.legend(loc='best')
-
+        ax.legend(loc='best')    
     
-    def tsne(self):
-        # tsne plots
-        # maybe put this in seperate class
-        pass
-    
-    
-    def plot_performance_distribution(self, poi=True):
+    def plot_performance_distribution(self, poi=True, fname='output.pdf'):
         """Function that creates performance plot on the top and distribution
         plot on the bottom
         
@@ -336,14 +379,15 @@ class Viz():
                 
         if self.results2 != None and poi == True:
             ax2 = ax[1].twinx()
-            self.gradient_poi_selection(ax2)
+            self.gradient_poi_selection(ax2, k=12)
 
             ax2.set_ylabel("Gradient of difference")
         
         ax[1].set_xlabel('Month')
-        plt.show()
+        # plt.show()
+        save_output(fname)
     
-    def plot_single(self, plot, month_selection=None):
+    def plot_single(self, plot, month_selection=None, fname='output.pdf'):
         """Function that creates one plot, takes in a plot type of 'distribution',
         'performance','difference'
 
@@ -369,7 +413,9 @@ class Viz():
         
         plt.xlabel('Month')
         plt.grid(visible=True, which='major', axis="y")
-        plt.show()
+        # plt.show()
+        print(fname)
+        save_output(fname)
         
         
 class VizExpl():
@@ -489,9 +535,13 @@ class VizExpl():
 
         for family in family_selection:
             for group in group_selection:
+                print('-'*10)
                 print(f"Top {k} feature(s) for group {group} for family {family}")
+                total = sum(abs(explanations[group-1]))
+                
                 for i, sample in enumerate(topk[group-1][:k]):
-                    print(i, feature_names[sample], explanations[group-1][sample])
+                    print(i, feature_names[sample], explanations[group-1][sample], round(explanations[group-1][sample]/total, 2) )
+            
 
 
     def get_explanations_mean_filter(self, result, family_select, result_orig = []):
@@ -612,18 +662,19 @@ class VizExpl():
         print("Top 5 features of C2 and their value changes from C1 to C2")
         print('-'*10)
         for n in range(5):
-            print(self.results1['feature_names'][topk_features2][n], round(values1[topk_features2][n],3), \
-                  round(values2[topk_features2][n],3), str(round((values2[topk_features2][n]/values1[topk_features2][n]*100),3)) + "%")
+            print(self.results1['feature_names'][topk_features2][n], round(values1[topk_features2][n]*100,3), \
+                  round(values2[topk_features2][n]*100,3), str(round((values2[topk_features2][n]/values1[topk_features2][n]*100),3)) + "%")
 
         
-
-
-
 class FamilyIso(Viz):
     def __init__(self, results1, results2, results3, results4, results5):
         self.results = [results1, results2, results3, results4, results5]
+        rc('font', **{'size': 20, 'family': 'serif', 'serif': ['Computer Modern Roman']})
+        rc('text', usetex=True)
+        rc('xtick', labelsize=6)
+        rc('ytick', labelsize=7)
         
-    def plot_family_iso_matrix(self):
+    def plot_family_iso_matrix(self, fname='output.pdf'):
         """Plots recall of solo train experiments and prints output as table. This replicates 
         table 7 of the paper.
         """     
@@ -660,28 +711,31 @@ class FamilyIso(Viz):
                     else:
                         correct_family.append(0)
                 
-                # total_family_normalised = np.divide(total_family[6:],grand_total)
-                correct_family_normalised = np.divide(correct_family,total_family[6:])
+                total_family_normalised = np.divide(total_family[6:],grand_total)
+                correct_family_normalised = np.divide(correct_family,grand_total)
 
-                # ax[x, y].plot(np.arange(len(total_family_normalised)),total_family_normalised, color='black')
+                np.nan_to_num(correct_family_normalised, copy=False,nan=0.0)
+                ax[x, y].plot(np.arange(len(total_family_normalised)),total_family_normalised, color='black', linewidth=0.2)
                 ax[x, y].fill_between(np.arange(len(correct_family_normalised)),0,correct_family_normalised,facecolor=ColorMap[testing_family].value)
-                
-                output.append(round((sum(correct_family_normalised)/sum(total_family[6:]))*100,2))
+                # ax[x, y].plot(np.arange(len(correct_family_normalised)),correct_family_normalised,color=ColorMap[testing_family].value)
+                output.append(round((sum(correct_family)/sum(total_family[6:]))*100,2))
                 
                 if x == 0:
-                    ax[x,y].set_title(testing_family, fontsize=25)
+                    ax[x,y].set_title(testing_family, fontsize=10)
                 if y == 0:
-                    ax[x,y].set_ylabel(training_family, fontsize=20)
+                    ax[x,y].set_ylabel(training_family, fontsize=10)
 
-                if y == len(training_familes)-1:
-                    labels_x = [a if (a % 5 ==0 or a == 1) else '' for a in range(1,55)]
-                    ax[x,y].set_xticks(np.arange(54))
+                if y == len(training_families)-1:
+                    ax[x,y].set_xticks(np.arange(0,54,5))
+                    labels_x = [0,5,10,15,20,25,30,35,40,45,50]
                     ax[x,y].set_xticklabels(labels_x)
+                ax[x,y].set_xticklabels(ax[x,y].get_xticks(), rotation=-90)
                     
             print(output)
-                    
+        
         plt.subplots_adjust(hspace = 0.05, wspace = 0.05)
-        plt.show()
+        # plt.show()
+        save_output(fname)
             
         
         
@@ -701,20 +755,25 @@ if __name__=='__main__':
     c1_random = ResultsLoader().load_file_from_id(17) # half random
     c2_random = ResultsLoader().load_file_from_id(13) # snoop random
     # c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
+    tes = ResultsLoader().load_file_from_id(49)
+
+    dowgin_solo = ResultsLoader().load_file_from_id(54)
+    dnotua_solo = ResultsLoader().load_file_from_id(60)
+    kuguo_solo = ResultsLoader().load_file_from_id(59)
+    airpush_solo = ResultsLoader().load_file_from_id(57)
+    revmob_solo = ResultsLoader().load_file_from_id(58)
+    # DimensionReduction().tsne_visual(['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB'])
 
 
-
-
-
-    visual = Viz(c1_random,c2_random)
-    visual.plot_performance_distribution()
-    # visual.plot_single('difference', month_selection=[27, 33,43])
+    
+    # visual.plot_performance_distribution()
+    # Viz(kuguo_solo).plot_single('performance', fname='output.pdf')
     
     # VizExpl(c2_random).top_features_of_given_family([1,25,52],['AIRPUSH'])
-    # VizExpl(c1_random,c2_random).mean_of_weights_of_top_feature_of_missed_family_samples(['AIRPUSH'], missed=False)
+    # VizExpl(c1_random,c2_random).mean_of_weights_of_top_feature_of_missed_family_samples(['AIRPUSH'])
 
     # VizExpl(c2_random,c1_random).feature_difference(group_selection=[45],family_select=['DNOTUA'])
     # VizExpl(c2).get_top_feature_for_sample('b073f248d7817bced11e07bb4fcb5c43')
     # VizExpl(c1).get_samples_from_group(group_selection=[46],family_selection=['Dnotua'])
     
-    # FamilyIso(dowgin_train,dnotua_train,kuguo_train,airpush_train,revmob_train).plot_family_iso_matrix()
+    # FamilyIso(dowgin_solo,dnotua_solo,kuguo_solo,airpush_solo,revmob_solo).plot_family_iso_matrix()
