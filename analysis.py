@@ -15,10 +15,11 @@ import pickle
 from collections import Counter
 import sqlite3
 from datetime import datetime
-
+import random
 
 from secml.ml.classifiers import CClassifierSVM
 from sklearn.metrics import f1_score, accuracy_score, precision_score, recall_score
+from sklearn.manifold import TSNE
 
 import explanations
 from util import get_random_string
@@ -250,7 +251,7 @@ class Analysis():
         
         # Add extra training samples from test set
         if additional_months:
-            selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
+            selected_indexes = self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
             selected_indexes += self.family_selection_from_index(self.initial_test[32],['DNOTUA'])
             selected_indexes += self.family_selection_from_index(self.initial_test[33],['DNOTUA'])
             selected_indexes += self.family_selection_from_index(self.initial_test[34],['DNOTUA'])
@@ -549,6 +550,27 @@ class Analysis():
             self.update_performance_results(*eval_out[:-1], len(retrain_index),
                                         self.f[selected_indexes],[explanations_results, self.md5[first_half]])
             self.check_family_labels(eval_out[-1], first_half, selected_indexes)
+        
+        
+    def tsne(self, families):
+        random.seed(10)
+        families = list(map(str.upper, families))
+        for family in families:
+            tsne_final_result = []
+            for group in range(len(self.initial_test)):
+                selected_indexes = self.family_selection_from_index(self.initial_test[group], family,goodware=False)
+                X = self.X[selected_indexes][:1000]
+
+                if len(X) > 10:
+                    tsne = TSNE(n_components=2, perplexity=10, learning_rate='auto', init='pca')
+                    tsne_result = tsne.fit_transform(X)
+                else:
+                    tsne_result = []
+                tsne_final_result.append(tsne_result)
+                
+            with open(f'pkl_files/tsne_{family}.pkl','wb') as f:
+                pickle.dump(tsne_final_result,f)
+        
         
     def run(self, training_family, testing_family, experiment, dataset):
         """Function that runs the corresponding experiment depending on the

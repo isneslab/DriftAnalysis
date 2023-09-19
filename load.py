@@ -125,9 +125,8 @@ def load_transcend(X, y, meta_info, meta_family):
 
     print("Family labels loaded")
 
+    # Feature reduction
     X, feature_names = util.feature_reduction(X, y, feature_names, "pkl_files/feature_index_1000_before_greyware.pkl", feature_size=1000)
-
-
 
     y = y[index_with_families]
     X = X[index_with_families]
@@ -136,3 +135,4 @@ def load_transcend(X, y, meta_info, meta_family):
     md5 = np.array(md5)[index_with_families]
     print("Finished loading Transcend dataset")
     return X, y, t, f, feature_names, md5
+    
