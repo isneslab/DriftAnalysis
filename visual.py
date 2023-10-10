@@ -682,11 +682,13 @@ class FamilyIso(Viz):
         fig, ax = plt.subplots(5,6, sharex=True, sharey=True)
         
         testing_families = ['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB','GOODWARE']
-        
         # Get all training familes
         training_families = []
         for n in range(len(self.results)):
-            training_families.append(self.results[n]['test_amount'][0][0][0])
+            if n == 1:
+                training_families.append(self.results[n]['test_amount'][0][0])
+            else:
+                training_families.append(self.results[n]['test_amount'][0][0][0])
 
         # Get total number of samples
         grand_total = []

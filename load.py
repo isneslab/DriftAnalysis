@@ -119,7 +119,7 @@ def load_transcend(X, y, meta_info, meta_family):
                     index_with_families.append(idx)
             else:
                 pass
-
+        os.mkdir("pkl_files")
         with open("pkl_files/family_labels.pkl","wb") as file:
             pickle.dump([index_with_families,f],file)
 
