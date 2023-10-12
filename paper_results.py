@@ -24,8 +24,8 @@ dataset = Dataset(X, y, t, f, feature_names, md5)
 # Split dataset and return time aware indexes for training and test
 train, test = dataset.time_aware_split_index('month', 6, 1)
 
-# # Run Tsne experiments
-# Analysis(X, y, t, f, feature_names, md5, train, test).tsne(['Dowgin','Dnotua','Kuguo','Airpush','Revmob'])
+# Run Tsne experiments
+Analysis(X, y, t, f, feature_names, md5, train, test).tsne(['Dowgin','Dnotua','Kuguo','Airpush','Revmob'])
 
 # Train and test for all families
 all_families_id = Analysis(X, y, t, f, feature_names, md5, train, test).run(
@@ -69,31 +69,29 @@ with open("results/results_files_id",'w') as f:
     f.writelines(f"airpush_solo_id: {loop_id[3]}")
     f.writelines(f"revmob_solo_id: {loop_id[4]}")
 
-# # Load in files
-# all_families = visual.ResultsLoader().load_file_from_id(1)
-# all_families_dnotua = visual.ResultsLoader().load_file_from_id(2)
-# cbase = visual.ResultsLoader().load_file_from_id(3)
-# c1 = visual.ResultsLoader().load_file_from_id(4)
-# c2 = visual.ResultsLoader().load_file_from_id(5)
-# dowgin_solo = visual.ResultsLoader().load_file_from_id(6)
-# dnotua_solo = visual.ResultsLoader().load_file_from_id(7)
-# kuguo_solo = visual.ResultsLoader().load_file_from_id(8)
-# airpush_solo = visual.ResultsLoader().load_file_from_id(9)
-# revmob_solo = visual.ResultsLoader().load_file_from_id(10)
-#
-# # print(dnotua_solo['test_amount'][0][0])
-#
-# # Plot files and save in output folder
-# visual.Viz(all_families).plot_single('performance', fname='transcend_all.pdf') # Fig 2a 
-# visual.Viz(all_families).plot_single('distribution', fname='transcend_distribution_all.pdf') # Fig 2b
-# visual.Viz(c2, c1, label1='(C1)', label2='(C2)').plot_performance_distribution(fname='goodware_snoop_performance.pdf') # Fig 3
-# visual.VizExpl(cbase,c1).mean_of_weights_of_top_feature_of_missed_family_samples(['DNOTUA'], missed=True) # Table 1
-# visual.VizExpl(cbase,c1).mean_of_weights_of_top_feature_of_missed_family_samples(['AIRPUSH'], missed=True) # Table 3
-# visual.Viz(c2, c1, label1='(C2)', label2='(C1)').plot_single('difference', month_selection=[23, 31, 47], fname='goodware_snoop_diff_crop.pdf') # Figure 4a
-# visual.Viz(cbase, c1, label1='(Cbase)', label2='(C1)').plot_single('difference', month_selection=[25, 31, 52], fname='malware_snoop_diff_crop.pdf') # Figure 4b
-# visual.Viz(cbase, c1, label1='(Cbase)', label2='(C1)').plot_performance_distribution(fname='malware_snoop_performance.pdf') # Figure 5
-# visual.Viz(all_families_dnotua).plot_single('performance', fname='transcend_all_dnotua.pdf') # Figure 6
-# visual.FamilyIso(dowgin_solo,dnotua_solo,kuguo_solo,airpush_solo,revmob_solo).plot_family_iso_matrix(fname='solo_performance_grid.pdf')# Figure 7 & Table 4
-# visual.DimensionReduction().tsne_visual(['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB'], fname='tsne_malware_overtime.pdf')
-# visual.VizExpl(c1).top_features_of_given_family([1,52,31,25,47,33,27,36,22,17,53,44,37],['DNOTUA']) # Table 5
-# visual.VizExpl(c1).top_features_of_given_family([1,52,31,25,47,33,27,36,22,17,53,44,37],['KUGUO']) # Table 6
+# Load in files
+all_families = visual.ResultsLoader().load_file_from_id(1)
+all_families_dnotua = visual.ResultsLoader().load_file_from_id(2)
+cbase = visual.ResultsLoader().load_file_from_id(3)
+c1 = visual.ResultsLoader().load_file_from_id(4)
+c2 = visual.ResultsLoader().load_file_from_id(5)
+dowgin_solo = visual.ResultsLoader().load_file_from_id(6)
+dnotua_solo = visual.ResultsLoader().load_file_from_id(7)
+kuguo_solo = visual.ResultsLoader().load_file_from_id(8)
+airpush_solo = visual.ResultsLoader().load_file_from_id(9)
+revmob_solo = visual.ResultsLoader().load_file_from_id(10)
+
+# Plot files and save in output folder
+visual.Viz(all_families).plot_single('performance', fname='transcend_all.pdf') # Fig 2a 
+visual.Viz(all_families).plot_single('distribution', fname='transcend_distribution_all.pdf') # Fig 2b
+visual.Viz(c2, c1, label1='(C1)', label2='(C2)').plot_performance_distribution(fname='goodware_snoop_performance.pdf') # Fig 3
+visual.VizExpl(cbase,c1).mean_of_weights_of_top_feature_of_missed_family_samples(['DNOTUA'], missed=True) # Table 1
+visual.VizExpl(cbase,c1).mean_of_weights_of_top_feature_of_missed_family_samples(['AIRPUSH'], missed=True) # Table 3
+visual.Viz(c2, c1, label1='(C2)', label2='(C1)').plot_single('difference', month_selection=[23, 31, 47], fname='goodware_snoop_diff_crop.pdf') # Figure 4a
+visual.Viz(cbase, c1, label1='(Cbase)', label2='(C1)').plot_single('difference', month_selection=[25, 31, 52], fname='malware_snoop_diff_crop.pdf') # Figure 4b
+visual.Viz(cbase, c1, label1='(Cbase)', label2='(C1)').plot_performance_distribution(fname='malware_snoop_performance.pdf') # Figure 5
+visual.Viz(all_families_dnotua).plot_single('performance', fname='transcend_all_dnotua.pdf') # Figure 6
+visual.FamilyIso(dowgin_solo,dnotua_solo,kuguo_solo,airpush_solo,revmob_solo).plot_family_iso_matrix(fname='solo_performance_grid.pdf')# Figure 7 & Table 4
+visual.DimensionReduction().tsne_visual(['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB'], fname='tsne_malware_overtime.pdf')
+visual.VizExpl(c1).top_features_of_given_family([1,52,31,25,47,33,27,36,22,17,53,44,37],['DNOTUA']) # Table 5
+visual.VizExpl(c1).top_features_of_given_family([1,52,31,25,47,33,27,36,22,17,53,44,37],['KUGUO']) # Table 6
