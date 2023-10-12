@@ -1,3 +1,4 @@
+import os
 from dataset import Dataset
 from load import load_transcend
 from analysis import Analysis
