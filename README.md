@@ -1,7 +1,7 @@
 # Drift Forensics of Malware Classifiers
 
 Repository containing code for our AISec23 paper:
-> Theo Chow, Zeliang Kan, Lorenz Linhardt, Lorenzo Cavallaro, Daniel Arp, and Fabio Pierazzi , Drift Forensics of Malware Classifiers , In Prof. of the ACM Workshop on Artificial Intelligence and Security (AISec), 2023
+> Theo Chow, Zeliang Kan, Lorenz Linhardt, Lorenzo Cavallaro, Daniel Arp, and Fabio Pierazzi , Drift Forensics of Malware Classifiers , In Proc. of the ACM Workshop on Artificial Intelligence and Security (AISec), 2023
 
 
 If you use this repository in your own research, please cite our AISec23 paper as follows:
@@ -10,7 +10,7 @@ If you use this repository in your own research, please cite our AISec23 paper a
 @inproceedings{chow2023driftforensics,
   title = {Drift Forensics of Malware Classifiers},
   author = {Chow, Theo and Kan, Zeliang and Linhardt, Lorenz and Cavallaro, Lorenzo and Arp, Daniel and Pierazzi, Fabio},
-  booktitle = {Prof. of the {ACM} Workshop on Artificial Intelligence and Security ({AISec})},
+  booktitle = {Proc. of the {ACM} Workshop on Artificial Intelligence and Security ({AISec})},
   year = {2023},
 }
 ```
