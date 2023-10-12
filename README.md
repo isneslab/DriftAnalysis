@@ -28,8 +28,13 @@ First, install package dependencies using the listing in `requirements.txt`.
 pip install -r requirements.txt
 ```
 
-## Usage
-The `main.py` script contains an example of running experiments using the transcedent dataset. Currently there are three experiments available: 'base', 'half' and 'snoop'. Below are steps on running a specific experiment.
+### Run experiments
+
+To reproduce the paper results, run
+
+```bash
+python paper_results.py
+```
 
 ### Load dataset
 First load in the desired dataset and obtain the X predictors *X*, y predictors *y*, timestamps *t*, family labels *f*, feature names *feature_names* and md5 *md5*. 
