@@ -3,6 +3,12 @@ from load import load_transcend
 from analysis import Analysis
 import visual
 
+# Create dirs to store results
+if not os.path.isdir('./pkl_files'):
+    os.mkdir('pkl_files')
+
+if not os.path.isdir('./results'):
+    os.mkdir('results')
 
 # Load in Transcend
 PATH = "../Datasets/extended-features/"
