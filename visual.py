@@ -685,9 +685,9 @@ class FamilyIso(Viz):
         # Get all training familes
         training_families = []
         for n in range(len(self.results)):
-            if n == 1:
-                training_families.append(self.results[n]['test_amount'][0][0])
-            else:
+            # if n == 1:
+            #     training_families.append(self.results[n]['test_amount'][0][0])
+            # else:
                 training_families.append(self.results[n]['test_amount'][0][0][0])
 
         # Get total number of samples
@@ -738,44 +738,3 @@ class FamilyIso(Viz):
         plt.subplots_adjust(hspace = 0.05, wspace = 0.05)
         # plt.show()
         save_output(fname)
-            
-        
-        
-    
-if __name__=='__main__':
-    print("Visual module")
-    training_familes = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
-    testing_families = ['Dowgin','Dnotua','Kuguo','Airpush','Revmob']
-    # ResultsLoader().query_database_for_ID('snoop',training_familes,testing_families,'Transcend')
-    # c1 = ResultsLoader().load_file_from_id(10) # half
-    # c2 = ResultsLoader().load_file_from_id(11) # snoop
-    # c3 = ResultsLoader().load_file_from_id(17) # snoop no gw
-    # all = ResultsLoader().load_file_from_id(18) # all families
-    # dnotua_all = ResultsLoader().load_file_from_id(19) # trained on all families + dnotua month 31
-    # all_ish = ResultsLoader().load_file_from_id(21) # all families (actually just 20)
-    # dnotua_all_ish = ResultsLoader().load_file_from_id(20) # all families (actually just 20) + dnotua month 31
-    c1_random = ResultsLoader().load_file_from_id(17) # half random
-    c2_random = ResultsLoader().load_file_from_id(13) # snoop random
-    # c3_random = ResultsLoader().load_file_from_id(23) # snoop no gw random
-    tes = ResultsLoader().load_file_from_id(49)
-
-    dowgin_solo = ResultsLoader().load_file_from_id(54)
-    dnotua_solo = ResultsLoader().load_file_from_id(60)
-    kuguo_solo = ResultsLoader().load_file_from_id(59)
-    airpush_solo = ResultsLoader().load_file_from_id(57)
-    revmob_solo = ResultsLoader().load_file_from_id(58)
-    # DimensionReduction().tsne_visual(['DOWGIN','DNOTUA','KUGUO','AIRPUSH','REVMOB'])
-
-
-    
-    # visual.plot_performance_distribution()
-    # Viz(kuguo_solo).plot_single('performance', fname='output.pdf')
-    
-    # VizExpl(c2_random).top_features_of_given_family([1,25,52],['AIRPUSH'])
-    # VizExpl(c1_random,c2_random).mean_of_weights_of_top_feature_of_missed_family_samples(['AIRPUSH'])
-
-    # VizExpl(c2_random,c1_random).feature_difference(group_selection=[45],family_select=['DNOTUA'])
-    # VizExpl(c2).get_top_feature_for_sample('b073f248d7817bced11e07bb4fcb5c43')
-    # VizExpl(c1).get_samples_from_group(group_selection=[46],family_selection=['Dnotua'])
-    
-    # FamilyIso(dowgin_solo,dnotua_solo,kuguo_solo,airpush_solo,revmob_solo).plot_family_iso_matrix()

@@ -251,7 +251,7 @@ class Analysis():
         
         # Add extra training samples from test set
         if additional_months:
-            selected_indexes = self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
             selected_indexes += self.family_selection_from_index(self.initial_test[32],['DNOTUA'])
             selected_indexes += self.family_selection_from_index(self.initial_test[33],['DNOTUA'])
             selected_indexes += self.family_selection_from_index(self.initial_test[34],['DNOTUA'])
