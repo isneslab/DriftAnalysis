@@ -27,7 +27,7 @@ def feature_reduction(X, y, feature_names, file_path, feature_size=1000):
     if os.path.exists(file_path):
         with open(file_path, "rb") as file:
             select_index = pickle.load(file)
-    else:
+    else:        
         X_train, _, y_train, _ = train_test_split(X, y, test_size=0.3, random_state=3)
         svm_ = svm.LinearSVC(max_iter=50000, random_state=3)
         svm_.fit(X_train, y_train)

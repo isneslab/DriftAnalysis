@@ -26,6 +26,8 @@ class Explain():
 
     def IG(self):
         number_of_samples = len(self.test_data_y)
+        if number_of_samples < 1:
+            return [0]
         integrated_grad_matrix = np.zeros((number_of_samples,len(self.test_data_X[0])))
         reference = CArray(np.zeros((1,len(self.test_data_X[0]))))
 

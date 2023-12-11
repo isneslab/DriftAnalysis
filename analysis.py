@@ -248,15 +248,11 @@ class Analysis():
                 selected_indexes += self.family_selection_from_index(self.initial_train[train_group],family)
             else:
                 selected_indexes += self.initial_train[train_group]
-        
+
         # Add extra training samples from test set
         if additional_months:
-            selected_indexes += self.family_selection_from_index(self.initial_test[31],['DNOTUA'])
-            selected_indexes += self.family_selection_from_index(self.initial_test[32],['DNOTUA'])
-            selected_indexes += self.family_selection_from_index(self.initial_test[33],['DNOTUA'])
-            selected_indexes += self.family_selection_from_index(self.initial_test[34],['DNOTUA'])
-            selected_indexes += self.family_selection_from_index(self.initial_test[35],['DNOTUA'])
-            selected_indexes += self.family_selection_from_index(self.initial_test[36],['DNOTUA'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[16],['KUGUO'])
+            selected_indexes += self.family_selection_from_index(self.initial_test[17],['KUGUO'])
                 
         model = self.train_secml_model(self.X[selected_indexes], self.y[selected_indexes])
 
@@ -281,7 +277,7 @@ class Analysis():
         
         return model, len(selected_indexes)
     
-    def testing(self, model, training_amount, family=None):
+    def testing(self, model, training_amount, family=None, group_length = 0):
         """Experiment that tests on all samples of ever group
 
         Args:
@@ -291,7 +287,7 @@ class Analysis():
             all familes are used.
         """                
         explainer = explanations.Explain()
-        for group in range(len(self.initial_test)):
+        for group in range(group_length):
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
@@ -453,7 +449,7 @@ class Analysis():
         return first_half_filtered, second_half_filtered
     
     
-    def testing_half_group(self, model, training_amount, family=None, strat_split=True):
+    def testing_half_group(self, model, training_amount, family=None, strat_split=True, group_length = 0):
         """Experiment that tests on half of each group. Stratified
         Sampling is used to ensure even split in families. However, there is option to turn
         off stratified sampling which recreates paper results using random split.
@@ -465,7 +461,7 @@ class Analysis():
             all familes are used.
         """        
         explainer = explanations.Explain()
-        for group in range(len(self.initial_test)):
+        for group in range(group_length):
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
@@ -499,7 +495,7 @@ class Analysis():
 
         
     
-    def testing_half_group_snooped(self, family=None, gw_split2=True, strat_split = True):
+    def testing_half_group_snooped(self, family=None, gw_split2=True, strat_split = True, group_length = 0):
         """Experiment that trains on initial training + second half of
         testing for each group. Tests on remaining half the same group.
         StratifiedSampling is used to ensure even split in families.
@@ -514,7 +510,7 @@ class Analysis():
             train_selected_indexes += self.family_selection_from_index(self.initial_train[train_group],family)
           
         explainer = explanations.Explain()
-        for group in range(len(self.initial_test)):
+        for group in range(group_length):
             # Select test samples
             if family != None:
                 family = list(map(str.upper,family))
@@ -572,7 +568,7 @@ class Analysis():
                 pickle.dump(tsne_final_result,f)
         
         
-    def run(self, training_family, testing_family, experiment, dataset):
+    def run(self, training_family, testing_family, experiment, dataset, group_length=0):
         """Function that runs the corresponding experiment depending on the
         paramaters provided. Currently there are 3 experiments implemented. For
         detailed explanation refer to corresponding function.
@@ -592,26 +588,29 @@ class Analysis():
             print("Error: Experiment not recognised, \
                   try: base|half|snoop|nogwsnoop|half_random|snoop_random|nogwsnoop_random|base_additional")
             exit()
-            
+        
+        if group_length == 0:
+            group_length = len(self.initial_test)
+        
         if experiment.lower() == 'base_additional':
             trained_model, trained_amount = self.training(training_family, additional_months=True)
-            self.testing(trained_model, trained_amount, testing_family)
+            self.testing(trained_model, trained_amount, testing_family, group_length=group_length)
         else:
             trained_model, trained_amount = self.training(training_family)
             if experiment.lower() == 'base':
-                self.testing(trained_model, trained_amount, testing_family)
+                self.testing(trained_model, trained_amount, testing_family, group_length=group_length)
             elif experiment.lower() == 'half':
-                self.testing_half_group(trained_model, trained_amount,testing_family)
+                self.testing_half_group(trained_model, trained_amount,testing_family, group_length=group_length)
             elif experiment.lower() == 'snoop':
-                self.testing_half_group_snooped(testing_family)
+                self.testing_half_group_snooped(testing_family, group_length=group_length)
             elif experiment.lower() == 'nogwsnoop':
-                self.testing_half_group_snooped(testing_family, gw_split2=False)
+                self.testing_half_group_snooped(testing_family, gw_split2=False, group_length=group_length)
             elif experiment.lower() == 'half_random':
-                self.testing_half_group(trained_model, trained_amount,testing_family, strat_split=False)
+                self.testing_half_group(trained_model, trained_amount,testing_family, strat_split=False, group_length=group_length)
             elif experiment.lower() == 'snoop_random':
-                self.testing_half_group_snooped(testing_family, strat_split=False)
+                self.testing_half_group_snooped(testing_family, strat_split=False, group_length=group_length)
             elif experiment.lower() == 'nogwsnoop_random':
-                self.testing_half_group_snooped(testing_family, gw_split2=False, strat_split=False)
+                self.testing_half_group_snooped(testing_family, gw_split2=False, strat_split=False, group_length=group_length)
             else:
                 pass
         

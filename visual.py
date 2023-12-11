@@ -145,7 +145,7 @@ class Viz():
         # Set x to plot
         x = np.arange(len(y1_f1))
         alpha_1 = 1
-        
+
         # Plot f1 score for results 2 and lower alpha of results 1 
         if self.results2 != None:   
             y2_f1 = self.results2['f1'][1:]
@@ -379,7 +379,7 @@ class Viz():
                 
         if self.results2 != None and poi == True:
             ax2 = ax[1].twinx()
-            self.gradient_poi_selection(ax2, k=12)
+            self.gradient_poi_selection(ax2, k=3)
 
             ax2.set_ylabel("Gradient of difference")
         

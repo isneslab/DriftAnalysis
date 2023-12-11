@@ -17,6 +17,27 @@ import pickle
 import util
 
 from sklearn.feature_extraction import DictVectorizer
+ 
+md5_counter_int = 1
+
+
+def load_npz_files(filename):
+    folder = '../Datasets/data/gen_apigraph_drebin'
+    saved_data_file = os.path.join(folder, filename)
+    data = np.load(saved_data_file)
+    X_train, y_train = data['X_train'], data['y_train']
+    y_mal_family = data['y_mal_family']
+    ben_len = X_train.shape[0] - y_mal_family.shape[0]
+    y_ben_family = np.full(ben_len, 'GOODWARE')
+    all_train_family = np.concatenate((y_mal_family, y_ben_family), axis=0).upper()
+    y_train_new = [y if y == 0 else 1 for y in y_train]
+    return X_train, y_train_new, all_train_family
+    
+def generate_fake_md5():
+    global md5_counter_int
+    new_fake_md5 = str(md5_counter_int).zfill(10)
+    return new_fake_md5
+    
 
 def load_file(filename):
     """Helper function to load json files
@@ -30,6 +51,21 @@ def load_file(filename):
     """
     with open(filename, 'r') as f:
         data = json.load(f)
+    
+    return data
+
+def load_pkl_file(filename):
+    """Helper function to load pkl files
+    
+    Arg:
+        filename (str): File path of pkl file to be loaded
+
+    Returns:
+        (json object): pkl file object 
+
+    """
+    with open(filename, 'rb') as f:
+        data = pickle.load(f)
     
     return data
 
@@ -70,7 +106,9 @@ def load_transcend(X, y, meta_info, meta_family):
 
     # Load in y
     y = load_file(y)
+    # y = np.asarray(y).flatten()
     y = np.asarray(y).flatten()
+    y = y.astype(int)
     print("y loaded")
 
     # Load in time
@@ -125,13 +163,66 @@ def load_transcend(X, y, meta_info, meta_family):
     print("Family labels loaded")
 
     # Feature reduction
-    X, feature_names = util.feature_reduction(X, y, feature_names, "pkl_files/feature_index_1000_before_greyware.pkl", feature_size=1000)
+    # X, feature_names = util.feature_reduction(X, y, feature_names, "pkl_files/feature_index_1000_before_greyware.pkl", feature_size=1000)
 
     y = y[index_with_families]
-    X = X[index_with_families]
+    X = X[index_with_families].toarray()
     t = t[index_with_families]
     f = np.array(f)
     md5 = np.array(md5)[index_with_families]
     print("Finished loading Transcend dataset")
+    return X, y, t, f, feature_names, md5
+    
+def load_apigraph_drebin():
+    """Loading function for Apigraph drebin dataset
+    Returns:
+        (scipy.sparse.csr_matrix, np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+            Array of predictors X
+            Array of predictors y
+            Array of time stamps
+            Array of family labels
+            Array of feature names
+            Array of md5
+    """        
+    print("Loading APIGgraph drebin dataset, this can take up to 3 minutes...")
+
+    
+    # Load in 1 year of training data
+    X, y, f = load_npz_files('2012-01to2012-12_selected.npz')
+    
+    t = []
+    md5 = []
+    for n in range(len(y)):
+        month = 1
+        md5.append(generate_fake_md5())
+        t.append(datetime.datetime(2012,1,1,1,1,1))
+        if n > int(len(y)/12) * 1:
+            month += 1
+    
+    feature_names = load_file('2012-01to2012-12_selected_training_features.json')    
+    for year in [2013,2014,2015,2016,2017,2018]:
+        for month in range(1,13):
+            if year == 2018 and month > 10:
+                break
+            month = str(month).zfill(2)
+            filename = f'{year}-{month}_selected.npz'
+            X_test, y_test, f_test = load_npz_files(filename)
+            t_test = []
+            md5_test = []
+            for n in range(len(y_test)):
+                md5.append(generate_fake_md5())
+                t.append(datetime.datetime(year,month,1,1,1,1))
+
+            X = np.concatenate((X, X_test))
+            y = np.concatenate((y, y_test))
+            f = np.concatenate((f, f_test))
+            t = np.concatenate((t, t_test))
+            md5 = np.concatenate((md5, md5_test))
+ 
+    print("Finished loading apigraph drebin dataset")
+    
+    f = np.array(f)
+    md5 = np.array(md5)
+    
     return X, y, t, f, feature_names, md5
     
