@@ -48,7 +48,7 @@ class Analysis():
         self.initial_test = test_index
         self.results = {"accuracy":[], "f1":[], "recall":[], "precision":[], "f1_n":[],  "recall_n":[], "precision_n":[],
                         "train_amount":[], "test_amount":[], "total_family":[], "explanations":[], "correct_family":[], 
-                        "family_class":[], "feature_names":feature_names}
+                        "family_class":[], "feature_names":feature_names, "training_size":0}
         
     
     def train_svc_model(self,X_train, y_train):
@@ -212,18 +212,19 @@ class Analysis():
         # set in to 6 months and counts up the families returning a dict. Any
         # months greater than 6 is merged to month 6
         
-        output = {1:[], 2:[], 3:[], 4:[], 5:[], 6:[]}
+        output = {}
         for index in indexes:
-            if self.t[index].month > 6:
-                output[6].append(self.f[index])
+            if self.t[index].month > len(self.initial_train):
+                output[len(self.initial_train)].append(self.f[index])
             else:
                 output[self.t[index].month].append(self.f[index])
             
         final_output = []
-        for month in range(1,7):
+        for month in range(1,len(self.initial_train)+1):
             self.results['total_family'].append(Counter(output[month]))     
             final_output.append(output[month])
-        
+            
+        self.results['training_size'] = len(self.initial_train)
         return final_output
     
     def training(self, family=None, additional_months=False):
