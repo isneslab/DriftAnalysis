@@ -213,6 +213,9 @@ class Analysis():
         # months greater than 6 is merged to month 6
         
         output = {}
+        for months in range(1, len(self.initial_train)+1):
+            output[months] = []
+            
         for index in indexes:
             if self.t[index].month > len(self.initial_train):
                 output[len(self.initial_train)].append(self.f[index])
