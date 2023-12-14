@@ -63,15 +63,15 @@ class DimensionReduction():
         save_output(fname)
         
 class ResultsLoader():
-    def __init__(self):
-        pass
+    def __init__(self, filepath = 'pkl_files'):
+        self.filepath = filepath
     
     
     def query_database_for_ID(self, experiment, train_families, test_families, dataset):
         # Loads in results which I can then pass to a viz class for actual plotting
 
         # Establish connections
-        conn = sqlite3.connect('pkl_files/results.db')
+        conn = sqlite3.connect(f'{self.filepath}/results.db')
         c = conn.cursor()       
         
         condition = ""
@@ -94,20 +94,20 @@ class ResultsLoader():
 
         
     def load_file_from_id(self, ID):
-        conn = sqlite3.connect("pkl_files/results.db")
+        conn = sqlite3.connect(f"{self.filepath}/results.db")
         c = conn.cursor()
         query = "SELECT Results from result WHERE rowid = {}".format(ID)
         c.execute(query)
         filename = c.fetchall()[0][0]
         # Add some information of what was loaded
-        with open(f"pkl_files/{filename}", 'rb') as f:
+        with open(f"{self.filepath}/{filename}", 'rb') as f:
             data = pickle.load(f)
         
         return data
 
 
 class Viz():
-    def __init__(self, results1, results2=None, label1='', label2=''):
+    def __init__(self, results1, results2=None, label1='', label2='', training_size = 6):
         """Base visual class that set global matplotlib parameters and inputs
         used for plotting
 
@@ -121,6 +121,8 @@ class Viz():
         self.results2 = results2
         self.label1 = label1
         self.label2 = label2
+        self.cm = ColorMap()
+        self.training_size = training_size
         
         rc('font', **{'size': 40, 'family': 'serif', 'serif': ['Computer Modern Roman']})
         rc('text', usetex=True)
@@ -128,6 +130,7 @@ class Viz():
         rc('ytick', labelsize=40)
         rc('legend', fontsize=25)
         rcParams['figure.figsize'] = [16, 10]
+        
     
     def performance(self, ax):
         """Function that plots the performance curve of results1 and/or results2.
@@ -149,31 +152,31 @@ class Viz():
         # Plot f1 score for results 2 and lower alpha of results 1 
         if self.results2 != None:   
             y2_f1 = self.results2['f1'][1:]
-            ax.plot(x, y2_f1, color = ColorMap['F1'].value, markersize=7, marker="o", 
+            ax.plot(x, y2_f1, color = self.cm.get_color('f1'), markersize=7, marker="o", 
                        label=f'F1 {self.label2} ', linewidth=2)
             alpha_1 = 0.3
         else:
-            ax.plot(x, y1_recall, color= ColorMap['RECALL'].value, markersize=7, 
+            ax.plot(x, y1_recall, color = self.cm.get_color('recall'), markersize=7, 
                     marker="^", label=f'Recall', linewidth=2)
             
-            ax.plot(x, y1_prec, color= ColorMap['PREC'].value, markersize=7, 
+            ax.plot(x, y1_prec, color = self.cm.get_color('precision'), markersize=7, 
                     marker="s", label=f'Precision', linewidth=2)
 
         # Plot f1 score for results 1
-        ax.plot(x, y1_f1, color = ColorMap['F1'].value, markersize = 7, marker="o",
+        ax.plot(x, y1_f1, color = self.cm.get_color('f1'), markersize = 7, marker="o",
                 label=f'F1 {self.label1} ', linewidth=2, alpha=alpha_1)
         ax.fill_between(x, 0, y1_f1, facecolor='none', hatch='/',
                         edgecolor='#BCDEFE', rasterized=True)
 
         months_of_x = len(self.results1['total_family'])+1
-        labels_x = [str(x-6) if ((x > 6 and ((x-1) % 5 == 0 or x == 7)) or x == 1)
+        labels_x = [str(x-self.training_size) if ((x > self.training_size and ((x-1) % 5 == 0 or x == self.training_size+1)) or x == 1)
                     else '' for x in range(1,months_of_x)]
 
-        ax.set_xticks(np.arange(-6,months_of_x-7))
+        ax.set_xticks(np.arange(-self.training_size,months_of_x-self.training_size+1))
         ax.set_xticklabels(labels_x)
         ax.set_ylabel("Performance")
-        ax.legend(loc='best')
-        ax.set_xlim(-6.5,months_of_x-7)
+        # ax.legend(loc='best')
+        ax.set_xlim(self.training_size-0.5,months_of_x-self.training_size+1)
     
     def gradient_poi_selection(self,ax, k=3):
         """Function that selectionos POI by first calculating the difference of F1
@@ -208,7 +211,7 @@ class Viz():
         ax.set_ylim(0,1)
       
     
-    def distribution(self, ax, goodware=False):
+    def distribution(self, ax, goodware=False, all_fams = False):
         """Function that shows the distribution of families in the samples used
         for both training and testing. Training months are shifted to begin at -5 to 0 and
         testing months begin at 1. 
@@ -219,49 +222,62 @@ class Viz():
             goodware (bool, optional): Whether goodware should be shown. Defaults to False.
         """        
         families = self.get_families_used()
-        groups = np.arange(-6, len(self.results1['total_family']) - 6)
+        groups = np.arange(-self.training_size, len(self.results1['total_family']) - self.training_size)
         previous_count = np.array([0]* len(self.results1['total_family']))
         accepted_families = ["DOWGIN",'DNOTUA','KUGUO','AIRPUSH','REVMOB']
         
         others = np.array([0]* len(self.results1['total_family']))
         for family in families:
-            if family in accepted_families:
+            if all_fams:
+                # If only several families are to be plotted
+                if family in accepted_families:
+                    count_by_family = []
+                    for group in groups:
+                        if family in self.results1['total_family'][group + self.training_size]:
+                            count_by_family.append(self.results1['total_family'][group + self.training_size][family])
+                        else:
+                            count_by_family.append(0)
+
+                    ax.bar(groups, count_by_family, label=family, bottom=previous_count,
+                        color=self.cm.get_color(family))
+                    previous_count += np.array(count_by_family)
+                else:
+                    count_by_family = []
+                    for group in groups:
+                        if family in self.results1['total_family'][group + self.training_size]:
+                            count_by_family.append(self.results1['total_family'][group + self.training_size][family])
+                        else:
+                            count_by_family.append(0)
+                    others += np.array(count_by_family)
+                    
+                # Other families
+                if len(families) > len(accepted_families):
+                    ax.bar(groups, others, label='OTHERS', bottom=previous_count, color='#800000')
+                    previous_count += np.array(others)
+            else:
                 count_by_family = []
                 for group in groups:
-                    if family in self.results1['total_family'][group + 6]:
-                        count_by_family.append(self.results1['total_family'][group + 6][family])
+                    if family in self.results1['total_family'][group + self.training_size]:
+                        count_by_family.append(self.results1['total_family'][group + self.training_size][family])
                     else:
                         count_by_family.append(0)
 
                 ax.bar(groups, count_by_family, label=family, bottom=previous_count,
-                    color=ColorMap[family].value)
+                    color=self.cm.get_color(family))
                 previous_count += np.array(count_by_family)
-            else:
-                count_by_family = []
-                for group in groups:
-                    if family in self.results1['total_family'][group + 6]:
-                        count_by_family.append(self.results1['total_family'][group + 6][family])
-                    else:
-                        count_by_family.append(0)
-                others += np.array(count_by_family)
-                
-        # Other families
-        if len(families) > len(accepted_families):
-            ax.bar(groups, others, label='OTHERS', bottom=previous_count, color='#800000')
-            previous_count += np.array(others)
         
         if goodware:
-            ax.bar(groups, previous_count, label='GOODWARE',bottom=previous_count, color=ColorMap['GOODWARE'].value)        
+            ax.bar(groups, previous_count, label='GOODWARE',bottom=previous_count, color=self.cm.get_color('GOODWARE'))        
         
         months_of_x = len(self.results1['total_family'])+1
-        labels_x = [str(x-6) if ((x > 6 and ((x-1) % 5 == 0 or x == 7)) or x == 1)
+        labels_x = [str(x-self.training_size) if ((x > self.training_size and ((x-1) % 5 == 0 or x == self.training_size+1)) or x == 1)
                     else '' for x in range(1,months_of_x)]
         
-        ax.set_xticks(np.arange(-6,months_of_x-7))
+        ax.set_xticks(np.arange(-self.training_size,months_of_x-self.training_size+1))
         ax.set_xticklabels(labels_x)
         ax.set_ylabel('\# of samples')
-        ax.legend(loc='best')
-        ax.set_xlim(-6.5,months_of_x-7)
+        # ax.legend(loc='best')
+        ax.set_xlim(-self.training_size-0.5,months_of_x-self.training_size+1)
         plt.grid(visible=True, which='major', axis="y")
 
     
@@ -308,8 +324,8 @@ class Viz():
         total_samples_all = [0] * len(self.results1['correct_family'])
         for family in familes:
             for group in range(len(self.results1['correct_family'])):
-                if family in self.results1['total_family'][group + 6]:
-                        total_samples_all[group] += self.results1['total_family'][group + 6][family]       
+                if family in self.results1['total_family'][group + self.training_size]:
+                        total_samples_all[group] += self.results1['total_family'][group + self.training_size][family]       
         # Loop through families
         for family in familes:
             results1_true_positives = []
@@ -348,7 +364,7 @@ class Viz():
             true_positive_diff_norm = [x if x >= 0 else 0 for x in true_positive_diff_norm]
 
             # Plot bar plot
-            ax.bar(X, true_positive_diff_norm, color=ColorMap[family].value,\
+            ax.bar(X, true_positive_diff_norm, color=self.cm.get_color(family),\
                   label = family.capitalize(), bottom=previous_count)
             
             previous_count += np.array(true_positive_diff_norm)
@@ -692,7 +708,7 @@ class FamilyIso(Viz):
 
         # Get total number of samples
         grand_total = []
-        for month in self.results[0]['total_family'][6:]:
+        for month in self.results[0]['total_family'][self.training_size:]:
             grand_total.append(sum(month.values()))
                 
         for x, training_family in enumerate(training_families):
@@ -713,14 +729,14 @@ class FamilyIso(Viz):
                     else:
                         correct_family.append(0)
                 
-                total_family_normalised = np.divide(total_family[6:],grand_total)
+                total_family_normalised = np.divide(total_family[self.training_size:],grand_total)
                 correct_family_normalised = np.divide(correct_family,grand_total)
 
                 np.nan_to_num(correct_family_normalised, copy=False,nan=0.0)
                 ax[x, y].plot(np.arange(len(total_family_normalised)),total_family_normalised, color='black', linewidth=0.2)
-                ax[x, y].fill_between(np.arange(len(correct_family_normalised)),0,correct_family_normalised,facecolor=ColorMap[testing_family].value)
+                ax[x, y].fill_between(np.arange(len(correct_family_normalised)),0,correct_family_normalised,facecolor=self.cm.get_color(family))
                 # ax[x, y].plot(np.arange(len(correct_family_normalised)),correct_family_normalised,color=ColorMap[testing_family].value)
-                output.append(round((sum(correct_family)/sum(total_family[6:]))*100,2))
+                output.append(round((sum(correct_family)/sum(total_family[self.training_size:]))*100,2))
                 
                 if x == 0:
                     ax[x,y].set_title(testing_family, fontsize=10)
