@@ -143,6 +143,11 @@ class Dataset():
                 print(self.t[idx].month)
                 print(self.f[idx])
     
+    def get_family_amount(self):
+        total_families = Counter(self.f)
+        for n in total_families:
+            print(n)
+        
     
     def sample_select_from_feature_id(self,families, ids, contains=True,year=None,month=None, md5_samples=3):
         """Function that selects samples of a given feature ID
